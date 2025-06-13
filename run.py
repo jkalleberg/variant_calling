@@ -21,20 +21,21 @@ def __init__() -> None:
     run.start_module()
 
     # Edit for manually testing command line arguments
-    # run.collect_args(
-    #     [
-    #         "-O",
-    #         "/mnt/pixstor/schnabelr-ccgi-drii/WORKING/jakth2/240801_SHO_OUTPUTS/MAF_FILTERED",
-    #         "-I",
-    #         "/mnt/pixstor/schnabelr-ccgi-drii/WORKING/jakth2/240801_SHO_OUTPUTS/MAF_FILTERED/CLEAN.NORM.SHO.BIALLELIC.59534.UMAG1.SNPs.MAF_FILTERED.1.MAF_DIST.tsv",
-    #         "--dry-run",
-    #         # "--debug",
-    #         # "--overwrite",
-    #     ]
-    # )
+    run.collect_args(
+        [
+            "-O",
+            "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST",
+            "-I",
+            "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/CUE_RESULTS/SAMPLES/240711_9913_1kbulls_ars1.2.samples.csv",
+            "--dry-run",
+            "--debug",
+            "--overwrite",
+        ]
+    )
     
     run.collect_args()
     run.check_args()
+    breakpoint()
     run.process_args()
     
     # ENTER CUSTOM SUB-MODULES HERE!
