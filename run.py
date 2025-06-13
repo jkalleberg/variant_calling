@@ -1,0 +1,47 @@
+#!/usr/bin/python3
+"""
+description: template to use for creating custom Python executables.
+
+example: python3 run.py -O /path/to/output/dir -I /path/to/input/file --dryrun --debug --overwrite
+
+"""
+
+from pathlib import Path
+from sys import path
+
+abs_path = Path(__file__).resolve()
+module_path = str(abs_path.parent.parent)
+path.append(module_path)
+
+from helpers.module_builder import CustomModule
+
+def __init__() -> None:
+
+    run = CustomModule()
+    run.start_module()
+
+    # Edit for manually testing command line arguments
+    # run.collect_args(
+    #     [
+    #         "-O",
+    #         "/mnt/pixstor/schnabelr-ccgi-drii/WORKING/jakth2/240801_SHO_OUTPUTS/MAF_FILTERED",
+    #         "-I",
+    #         "/mnt/pixstor/schnabelr-ccgi-drii/WORKING/jakth2/240801_SHO_OUTPUTS/MAF_FILTERED/CLEAN.NORM.SHO.BIALLELIC.59534.UMAG1.SNPs.MAF_FILTERED.1.MAF_DIST.tsv",
+    #         "--dry-run",
+    #         # "--debug",
+    #         # "--overwrite",
+    #     ]
+    # )
+    
+    run.collect_args()
+    run.check_args()
+    run.process_args()
+    
+    # ENTER CUSTOM SUB-MODULES HERE!
+    
+    run.end_module()
+
+
+# Execute functions created
+if __name__ == "__main__":
+    __init__()
