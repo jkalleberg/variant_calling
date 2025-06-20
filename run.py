@@ -7,7 +7,7 @@ example: python3 run.py -O /path/to/output/dir -I /path/to/input/file --dryrun -
 """
 
 from pathlib import Path
-from sys import path
+from sys import path, exit
 
 abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
