@@ -9,13 +9,15 @@ from csv import QUOTE_NONE, DictReader, DictWriter, writer
 from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Union, TYPE_CHECKING
 from pickle import load
 import pandas as pd
 import json
 
 from helpers.suffix import remove_suffixes
-from helpers.module_builder import CustomModule
+
+if TYPE_CHECKING:
+    from helpers.inputs import InputManager
 
 
 class TestFile:
@@ -78,14 +80,14 @@ class File:
     Check for an existing file, before saving/opening multiple types of file formats.
 
     Attributes:
-        path -- the absolute path to a file
-        inputs -- a CustomModule() object
+        path_to_file -- the absolute path to a file  
+        cl_inputs -- an InputManager() object  
     """
 
     # required parameters
     path_to_file: Union[Path, str]
-    module_inputs: CustomModule
-
+    cl_inputs: "InputManager"
+    
     # optional parameters
     logger_msg: Union[str, None] = None
 
@@ -99,7 +101,11 @@ class File:
         self.path = Path(self.path_to_file)
         self.file_name = self.path.name
         self.path_only = self.path.parent
-        self._test_file = TestFile(self.path, self.logger)
+        
+        if self.logger_msg is None and self.cl_inputs.logger_msg is not None:
+            self.logger_msg = self.cl_inputs.logger_msg
+            
+        self._test_file = TestFile(self.path, self.cl_inputs.logger)
 
     def check_status(
         self,
@@ -109,10 +115,10 @@ class File:
         Confirm that the file is non-existent.
         """
         if should_file_exist is True:
-            self._test_file.check_existing(logger_msg=self.logger_msg, debug_mode=self.debug_mode)
+            self._test_file.check_existing(logger_msg=self.logger_msg, debug_mode=self.cl_inputs.debug_mode)
         else:
             self._test_file.check_missing(
-                logger_msg=self.logger_msg, debug_mode=self.debug_mode
+                logger_msg=self.logger_msg, debug_mode=self.cl_inputs.debug_mode
             )
         self.file_exists = self._test_file.file_exists
 
@@ -120,14 +126,14 @@ class File:
         """
         Take an iterable list of lines and write them to a text file.
         """
-        if self.inputs.dry_run_mode:
-            if self.inputs.logger_msg is None:
-                self.inputs.logger.info(
+        if self.cl_inputs.dry_run_mode:
+            if self.cl_inputs.logger_msg is None:
+                self.cl_inputs.logger.info(
                     f"[DRY_RUN]: pretending to write a list of lines | '{str(self.path)}'"
                 )
             else:
-                self.inputs.logger.info(
-                    f"{self.inputs.logger_msg}: pretending to write a list of lines | '{str(self.path)}'"
+                self.cl_inputs.logger.info(
+                    f"{self.cl_inputs.logger_msg}: pretending to write a list of lines | '{str(self.path)}'"
                 )
 
             print("---------------------------------------------")
@@ -160,14 +166,14 @@ class File:
         else:
             _delim = delim
 
-        if self.inputs.dry_run_mode:
-            if self.inputs.logger_msg is None:
-                self.inputs.logger.info(
+        if self.cl_inputs.dry_run_mode:
+            if self.cl_inputs.logger_msg is None:
+                self.cl_inputs.logger.info(
                     f"[DRY_RUN]: pretending to write a list of dictionaries | '{str(self.path)}'"
                 )
             else:
-                self.inputs.logger.info(
-                    f"{self.inputs.logger_msg}: pretending to write a list of dictionaries | '{str(self.path)}'"
+                self.cl_inputs.logger.info(
+                    f"{self.cl_inputs.logger_msg}: pretending to write a list of dictionaries | '{str(self.path)}'"
                 )
 
             print("---------------------------------------------")
@@ -187,28 +193,28 @@ class File:
         """
         Append rows to a csv.
         """
-        if self.inputs.dry_run_mode:
+        if self.cl_inputs.dry_run_mode:
             print(",".join(data_dict.values()))
         else:
             if self.path.exists():
-                if self.inputs.debug_mode:
+                if self.cl_inputs.debug_mode:
                     debug_msg = f"appending [{self.file}] with a new row"
-                    if self.inputs.logger_msg is None:
-                        self.inputs.logger.debug(debug_msg)
+                    if self.cl_inputs.logger_msg is None:
+                        self.cl_inputs.logger.debug(debug_msg)
                     else:
-                        self.inputs.logger.debug(f"{self.inputs.logger_msg}: {debug_msg}")
+                        self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: {debug_msg}")
 
                 with open(str(self.path), mode="a") as file:
                     dictwriter = DictWriter(file, fieldnames=col_names)
                     dictwriter.writerow(data_dict)
                     self.file_dict.update(data_dict)
             else:
-                if self.inputs.debug_mode:
+                if self.cl_inputs.debug_mode:
                     debug_msg = f"initializing | '{self.file}'"
-                    if self.inputs.logger_msg is None:
-                        self.inputs.logger.debug(debug_msg)
+                    if self.cl_inputs.logger_msg is None:
+                        self.cl_inputs.logger.debug(debug_msg)
                     else:
-                        self.inputs.logger.debug(f"{self.inputs.logger_msg}: {debug_msg}")
+                        self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: {debug_msg}")
 
                 with open(str(self.path), mode="w") as file:
                     dictwriter = DictWriter(file, fieldnames=col_names)
@@ -222,14 +228,14 @@ class File:
         Save or display counts from [run_name]-[iteration]-[test_number] only.
         """
         # If only testing, display to screen.
-        if self.inputs.dry_run_mode:
-            if self.inputs.logger_msg is None:
-                self.inputs.logger.info(
+        if self.cl_inputs.dry_run_mode:
+            if self.cl_inputs.logger_msg is None:
+                self.cl_inputs.logger.info(
                     f"[DRY_RUN]: pretending to write CSV file | '{str(self.path)}'"
                 )
             else:
-                self.inputs.logger.info(
-                    f"{self.inputs.logger_msg}: pretending to write CSV file | '{str(self.path)}'"
+                self.cl_inputs.logger.info(
+                    f"{self.cl_inputs.logger_msg}: pretending to write CSV file | '{str(self.path)}'"
                 )
 
             print("---------------------------------------------")
@@ -253,23 +259,22 @@ class File:
 
             if self.path.is_file():
                 logging_msg = f"created intermediate CSV file | '{self.file}'"
-                if self.inputs.logger_msg is None:
-                    self.inputs.logger.info(logging_msg)
+                if self.cl_inputs.logger_msg is None:
+                    self.cl_inputs.logger.info(logging_msg)
                 else:
-                    self.inputs.logger.info(f"{self.inputs.logger_msg}: {logging_msg}")
+                    self.cl_inputs.logger.info(f"{self.cl_inputs.logger_msg}: {logging_msg}")
 
-    def write_dataframe(self, df: pd.DataFrame, keep_index: bool = False) -> None:
-        if self.inputs.dry_run_mode:
-            self.inputs.logger.info(
-                f"{self.inputs.logger_msg}: pretending to write CSV file | '{str(self.path)}'"
+        if self.cl_inputs.dry_run_mode:
+            self.cl_inputs.logger.info(
+                f"{self.cl_inputs.logger_msg}: pretending to write {_format} file | '{str(self.path)}'"
             )
 
             print("---------------------------------------------")
             print(df)
             print("---------------------------------------------")
         else:
-            self.inputs.logger.info(
-                f"{self.inputs.logger_msg}: writing a CSV file | '{str(self.path)}'"
+            self.cl_inputs.logger.info(
+                f"{self.cl_inputs.logger_msg}: writing a {_format} file | '{str(self.path)}'"
             )
             df.to_csv(
                 str(self.path),
@@ -295,10 +300,10 @@ class File:
             import gzip
 
             logging_msg = f"handling a compressed file | '{self.path.stem}'"
-            if self.inputs.logger_msg is None:
-                self.inputs.logger.info(logging_msg)
+            if self.cl_inputs.logger_msg is None:
+                self.cl_inputs.logger.info(logging_msg)
             else:
-                self.inputs.logger.info(f"{self.inputs.logger_msg}: {logging_msg}")
+                self.cl_inputs.logger.info(f"{self.cl_inputs.logger_msg}: {logging_msg}")
             with gzip.open(str(self.path), mode="rt") as data:
                 reader = DictReader(data)
                 self._existing_data = [dict(row) for row in reader]
@@ -327,9 +332,9 @@ class File:
                     if reader.fieldnames and any(
                         i in contents for i in reader.fieldnames
                     ):
-                        if self.inputs.debug_mode:
-                            self.inputs.logger.debug(
-                                f"{self.inputs.logger_msg}: SKIPPING HEADERS"
+                        if self.cl_inputs.debug_mode:
+                            self.cl_inputs.logger.debug(
+                                f"{self.cl_inputs.logger_msg}: SKIPPING HEADERS"
                             )
                         continue
                     else:
