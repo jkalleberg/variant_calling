@@ -252,6 +252,10 @@ def __init__() -> None:
                 
     # Load in SLURM resource config file
     _cl_inputs.load_slurm_resources()
+    # Prepare pipeline-specific inputs
+    _pipeline_inputs = PipelineInputManager(cl_inputs=_cl_inputs,
+                                            variant_callers=_variant_callers)
+    
     
     run.end_module()
 
