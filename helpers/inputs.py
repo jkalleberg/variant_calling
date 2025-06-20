@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 @dataclass
-class Inputs:
+class InputManager:
     """
     Save the user-provided inputs for repeated use.
     """
@@ -20,12 +20,10 @@ class Inputs:
     args: Namespace
     logger: Logger
     phase: str
-
-    def __post_init__(self) -> None:
-        if "metadata" in self.args and self.args.metadata is not None:
-            self.metadata = Path(self.args.metadata)
-        if "output_dir" in self.args:
-            self.output_dir = Path(self.args.output_dir)
+    
+    # Internal parameters
+    _input_path: Union[Path,None] = None
+    _output_path: Union[Path,None] = None
 
     def update_mode(self) -> None:
         self.overwrite = self.args.overwrite
