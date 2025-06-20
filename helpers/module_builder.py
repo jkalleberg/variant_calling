@@ -132,6 +132,12 @@ class CustomModule:
             self.args.input
         ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file containing a list of BAM/CRAM files to process."
     
+    def get_arg_default(self, arg_name: str = "input") -> str:
+        """
+        Provide the default value for a command-line argument.
+        """
+        return self._parser.get_default(arg_name)
+     
     def process_args(self) -> None:
         """
         Handle expected defaults provide at the command line.

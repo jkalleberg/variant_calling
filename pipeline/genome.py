@@ -214,17 +214,10 @@ class Genome:
             self.pipeline_inputs.cl_inputs.create_a_dir(self._log_dir)
             self.pipeline_inputs.cl_inputs.create_a_dir(self._tmp_dir)
             
-            if "cue" in self._model_type.lower():
+            if self._model_type == "Cue":
                 self._reports_dir = self._sample_dir / "reports"
                 self.pipeline_inputs.cl_inputs.create_a_dir(self._reports_dir)
-            elif "deepvariant" in self._model_type.lower():
-                # Confirm a PopVCF containing allele frequency data was provided by the user
-                if self.pipeline_inputs.cl_inputs.args.pop_file is None:
-                    self.pipeline_inputs.cl_inputs.logger.info(
-                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: invalid --allele-freq; unable to use the custom bovine-trained checkpoint without a PopVCF.\nExiting now...",
-                    )
-                    exit(1)
-                
+            elif self._model_type == "DeepVariant":
                 self._pop_vcf = TestFile(
                     file=Path(self.pipeline_inputs.cl_inputs.args.pop_file).resolve(),
                     logger=self.pipeline_inputs.cl_inputs.logger)
@@ -417,7 +410,11 @@ class Genome:
             FileNotFoundError: _description_
         """
         self._pickle_file = input
-        self._pickle_file.check_status(should_file_exist=True)
+        # Only report a missing file outside of dry-run, where a file won't be written to disk yet
+        if self.pipeline_inputs.cl_inputs.dry_run_mode and not self.pipeline_inputs.cl_inputs.overwrite:
+            self._pickle_file.check_status()
+        else: 
+            self._pickle_file.check_status(should_file_exist=True)
         if not self._pickle_file.file_exists:
             if not self.pipeline_inputs.cl_inputs.dry_run_mode:
                 raise FileNotFoundError(

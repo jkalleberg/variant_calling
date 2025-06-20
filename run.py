@@ -114,15 +114,17 @@ def __init__() -> None:
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK 
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK 
             "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
-            "--dry-run",
-            "--debug",
-            # "--overwrite",
+            
             "--reference",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
             "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
             ### NO --allele-freq with default ckpt will break!
             "--allele-freq", 
             "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
+            
+            "--dry-run",
+            "--debug",
+            # "--overwrite",
             
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
             # "--resources",
@@ -191,6 +193,18 @@ def __init__() -> None:
         _no_valid_checkpoint = check_if_all_same([_use_deepvariant, _use_cue], None)
         assert (_no_valid_checkpoint is False), f"unable to find a supported checkpoint (e.g., DeepVariant or Cue) | '{run.args.model_prefix}'"
         
+        # Get the expected default checkpoint path (custom bovid-trained WGS AF)
+        _default_ckpt = Path(run.get_arg_default("model_prefix")).resolve()
+            
+        # Get the checkpoint entered at the command line
+        _user_ckpt = Path(run.args.model_prefix).resolve()
+
+        if _use_deepvariant:
+            # If using the pipeline's default DeepVariant checkpoint,
+            if _user_ckpt == _default_ckpt:
+                # Confirm a PopVCF containing allele frequency data was provided by the user
+                assert (Path(run.args.pop_file).resolve().is_file() is True), f"invalid --allele-freq; unable to use the custom bovine-trained checkpoint without a PopVCF."
+        
         # Save the list as a new command-line argument
         run.args.model_prefix = [Path(p) for p in _ckpt_list]
         
@@ -256,7 +270,7 @@ def __init__() -> None:
                 
     # Load in SLURM resource config file
     _cl_inputs.load_slurm_resources()
-    
+   
     # Determine the variant caller(s) requested by the user
     # Currently supported valid options:
     #   DeepVariant v1.4.0
@@ -265,9 +279,9 @@ def __init__() -> None:
     #   DeepTrio v1.5.0
     #   Cue v####
     # NOTE: this process expects the input checkpoint to be formatted as:
-    #       ./<MODEL_TYPE>/<MODEL_VERSION>/<CHECKPOINT_NAME>
+    #       ./tutorial/existing_ckpts/<MODEL_TYPE>/<MODEL_VERSION>/<CHECKPOINT_NAME>
     
-    # Extract info about the model(s) requested
+    # Save info about the model(s) requested
     _variant_callers = dict()
     for ckpt in _ckpt_list:
         _checkpoint_path = Path(ckpt).resolve()

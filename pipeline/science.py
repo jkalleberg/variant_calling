@@ -7,7 +7,8 @@ example usage: from pipeline.science import Science
 """
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Union
-from os import getcwd
+from os import getcwd, sched_getaffinity
+from multiprocessing import cpu_count
 import re
 
 if TYPE_CHECKING:
@@ -56,7 +57,7 @@ class Science:
     #         f"python3 ../cue/engine/call.py --data_config {str(self.genome._data_yaml)} --model_config {str(self.genome._model_yaml)}",
     #     ]
     
-    def set_container(self, type: str = "CPU") -> None:
+    def setup_container(self, type: str = "CPU") -> None:
         """
         Determine which Apptainer container to use.
 
@@ -106,6 +107,33 @@ class Science:
         self._bindings_str = ",".join(bindings)
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
             self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: container bindings | '{self._bindings_str}'")
+        
+    def setup_slurm_config(self) -> None:
+        """
+        Confirm the user has provided multiple processing cores in a SLURM config file.
+        
+        Otherwise, use the current number of cores available to the user.
+        """
+        if "ntasks" in self.genome.pipeline_inputs.cl_inputs.resource_dict.keys():
+            self._nproc = self.genome.pipeline_inputs.cl_inputs.resource_dict["ntasks"]
+            _label = "expected"
+        else: 
+            _label = "available"
+            try:
+                # This is preferred as it accurately reflects the CPU affinity
+                # and thus the number of CPUs available to the current process,
+                # especially in environments with CPU restrictions (like cgroups).
+                self._nproc  = len(sched_getaffinity(0))
+            except AttributeError:
+                # Fallback for systems that do not support os.sched_getaffinity,
+                # such as macOS or older Python versions.
+                # This returns the total number of logical CPUs on the system,
+                # which might not reflect process-specific CPU restrictions.
+                self._nproc  = cpu_count()
+
+        if self.genome.pipeline_inputs.cl_inputs.debug_mode:
+            self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: number of {_label} processing units | '{self._nproc}'") 
+        
 
     def build_deepvariant_cmd(self,
                               sequence_type: str = "WGS",
@@ -113,12 +141,13 @@ class Science:
         """
         Combine container, bindings, and flags into a single Apptainer command.
         """
-        self.set_container()
+        self.setup_container()
         self.create_bindings()
+        self.setup_slurm_config() 
         
         flags = [
             f"--model_type={sequence_type}",
-            # f"--num_shards={self._n_parts}", # TO DO: load in num shards provided via resource config
+            f"--num_shards={self._nproc}",
             f"--sample_name={self.genome._sample_id}",
         ]
         
