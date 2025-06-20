@@ -80,3 +80,63 @@ class Pipeline:
                 self.pipeline_inputs.cl_inputs.logger.info(
                         f"{_updated_logger_msg}: FOUND GENOME '{lab_id}' @ ITERATION '{g[0]}'"
                     )
+
+                # Uncomment if adding --check-samples arg
+                # if self._previously_run_samples:
+                #     self._skip_counter += 1
+                #     if lab_id in self._previously_run_samples:
+                #         self.pipeline_inputs.cl_inputs.logger.info(
+                #             f"{_updated_logger_msg}: FOUND GENOME '{lab_id}' @ ITERATION '{g[0]}'"
+                #         )
+                #     continue
+
+                _genome = Genome(
+                    sample=g, pipeline_inputs=self.pipeline_inputs,
+                )
+                _genome.init_genome()
+                
+                # Check for the expected output file produced by a specific variant caller
+                _default_output = _genome.pipeline_inputs.variant_callers[variant_caller]["default_output"]
+                
+                # if (
+                    #     # not _genome._missing_output
+                    #     # Uncomment for Cue
+                    #     # and not _genome._outputs._missing_any_outputs
+                    #     and not self.pipeline_inputs.cl_inputs.args.overwrite
+                    # ):
+                
+                # Identify the pickled data for a specific variant caller
+                if "deepvariant" in variant_caller.lower():
+                    _pickle_dir = _genome._sample_dir
+                elif "cue" in variant_caller.lower():
+                    _pickle_dir = _genome._reports_dir
+                else:
+                    print("LOOK HERE")
+                    breakpoint()
+                    
+                _genome_pickle = File(
+                    path_to_file=_pickle_dir / f"{_genome._sample_id}.pkl",
+                    cl_inputs=self.pipeline_inputs.cl_inputs,
+                )
+                
+                if _default_output.file_exists and not self.pipeline_inputs.cl_inputs.overwrite:
+                    # OUTPUT EXISTS!
+                    self.pipeline_inputs.cl_inputs.logger.info(
+                        f"{_updated_logger_msg}: found all outputs for sample '{_genome._sample_id}'... SKIPPING AHEAD"
+                    )
+                    self._skip_counter += 1
+                elif _default_output.file_exists is False or self.pipeline_inputs.cl_inputs.overwrite: 
+                    # OUTPUT DOES NOT EXIST!
+                    
+                    # Save the 'Genome()' obj to a file for future use
+                    _genome_pickle._test_file.check_missing()
+                    _genome_pickle.write_pickle(obj=_genome)
+                    _genome.check_pickle(input=_genome_pickle)
+                else:
+                    print("LOGIC FAILURE")
+                    breakpoint()
+                    
+                if self.pipeline_inputs.cl_inputs.args.group_size > 50:
+                    # Sleep for <1 second before submission to SLURM queue via process_genome()
+                    # NOTE: helps to rate limit jobs submission within a second
+                    sleep(random())
