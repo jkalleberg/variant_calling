@@ -140,3 +140,96 @@ class Pipeline:
                     # Sleep for <1 second before submission to SLURM queue via process_genome()
                     # NOTE: helps to rate limit jobs submission within a second
                     sleep(random())
+                
+                print("WHERE I LEFT OFF:")    
+                # print("GENOME:", _genome)
+                # breakpoint()
+                self.process_genome(genome=_genome)
+                breakpoint()
+                
+                # Uncomment to enable per-chr optimization
+                # if _genome._outputs._missing_any_outputs or self.pipeline_inputs.cl_inputs.overwrite:
+                # if _per_chr_jobids:
+                #     self.process_genome(prior_jobs=_per_chr_jobids)
+                # else:
+                #     self.process_genome()
+
+                if str(self._result).isnumeric() or self._result is None:
+                    self._job_ids.insert(i, self._result)
+                else:
+                    self._skip_counter += 1
+    def process_genome(
+        self,
+        genome: "Genome",
+        # prior_jobs: Union[List[Union[str, None]], None] = None
+    ) -> None:
+        """
+        Submit a SLURM job that takes a BAM/CRAM as input to generate a VCF output.
+
+        Args:
+            prior_jobs (Union[List[Union[str, None]], None], optional): _description_. Defaults to None.
+        """
+        if self.pipeline_inputs.cl_inputs.overwrite:
+            self.pipeline_inputs.cl_inputs.logger.info(
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg} --overwrite=True; re-writing the existing output file | '{self.genome._default_vcf.file}'"
+            )
+        
+        genome.init_science() 
+        # self._result = genome.submit_job()
+        breakpoint()
+
+        
+            # Uncomment for Cue
+            # # if missing raw CUE results completely...
+            # # Only call svs when creating the default VCF
+            # if not self.genome._default_vcf._file_exists:
+            #     if not self.genome.iter.inputs.args.per_chr or (
+            #         self.genome.iter.inputs.args.per_chr and not self.genome._final_genome
+            #     ):
+            #         # NOTE: "Cue"-specific job lines are only included if default VCF is missing
+            #         self.genome.call_svs(region=self.genome._region)
+            #         self.genome._run_cue = True
+            #     else:
+            #         self.genome._run_cue = False
+            # elif (
+            #     self.genome._default_vcf._file_exists
+            #     and self.pipeline_inputs.cl_inputs.overwrite
+            # ):
+            #     self.genome.call_svs()
+            # else:
+            #     self.genome._run_cue = False
+
+            # # Only rename/sort/index if either final outputs are missing
+            # if (
+            #     not self.genome._outputs._indexed_vcf._file_exists
+            #     or not self.genome._outputs._compressed_vcf._file_exists
+            #     or self.pipeline_inputs.cl_inputs.overwrite
+            # ):
+            #     self.genome.wrangle_svs()
+            #
+            # if not self.genome._submitting_jobs:
+            #     self.handle_resubmissions()
+
+            # if self.genome.iter.inputs.args.per_chr and not self.genome._final_genome:
+            #     if self.genome._submitting_jobs:
+            #         self._result = self.genome.submit_job()
+            #         self.genome._outputs._command_line._job_cmd = []
+            #         self.genome._outputs._command_line._n_new_lines = 0
+            #     else:
+            #         if self._rerun_counter == 0:
+            #             self._skip_counter += 1
+            # else:
+            #     # Generate SV metrics files if they are missing
+            #     if (
+            #         self.genome._submitting_jobs
+            #         and self.genome._outputs._missing_any_outputs
+            #     ) or self.pipeline_inputs.cl_inputs.overwrite:
+            #         self.genome.process_svs()
+            #         self.genome.clean_tmp()
+            #         self._result = self.genome.submit_job(prior_jobs=prior_jobs)
+            #     elif self.genome._outputs._missing_any_outputs:
+            #         self.genome.process_svs(stream=True)
+            #         # self._result = self.genome.submit_job(prior_jobs=prior_jobs)
+            #     else:
+            #         if self._rerun_counter == 0:
+            #             self._skip_counter += 1

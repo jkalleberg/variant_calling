@@ -16,6 +16,10 @@ path.append(module_path)
 # from helpers.files import File
 from helpers.utils import partial_match_case_insensitive, check_if_all_same, iterdir_with_prefix
 from helpers.module_builder import CustomModule
+from helpers.inputs import InputManager
+from pipeline.input import PipelineInputManager
+from pipeline.pipeline import Pipeline
+
 
 def __init__() -> None:
 
@@ -262,6 +266,29 @@ def __init__() -> None:
     
     # Create a 'default regions BED file' to exclude the unmapped contigs and MT genome
     _pipeline_inputs.default_regions_BED()
+    
+    # Determine how many rows were provided as a single input
+    _pipeline_inputs.count_inputs()    
+    
+    # Define a temp file to save samples to re-run
+    _pipeline_inputs.create_new_sample_file()
+    
+    # Define a temp file to store SLURM job ids for compute/wall time benchmarking
+    _pipeline_inputs.create_benchmarking_file()
+    
+    # Load in the original samples file
+    _pipeline_inputs.process_input_file()
+    
+    # Update phase
+    _cl_inputs.phase = f"variant_calling"
+    _cl_inputs.create_logging_msg()
+    
+    # Begin to iterate through all the samples
+    _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs)
+    _group_of_samples.all_genomes()
+    
+    print("STOP!")
+    breakpoint()
     
     run.end_module()
 

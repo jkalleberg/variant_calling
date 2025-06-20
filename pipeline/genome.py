@@ -173,3 +173,283 @@ class Genome:
         #     self.pipeline_inputs.cl_inputs.logger.info(
         #         f"{self._log_msg}: child_id='{self._sample_id}' | parent_ids={self.parents}"
         #     )
+    
+    def set_paths(self) -> None:
+        """
+        Define paths to frequently used directories.
+        """
+        if self._sample_id is None:
+            print("UH OH! Spaghetti-Os!")
+            breakpoint()
+        else:
+            # Are we creating sub-groups within the larger group?
+            if self.group_name is not None:
+                self._results_dir = (
+                    Path(self.pipeline_inputs.cl_inputs._output_path)  / "COHORT" / self.group_name
+                )
+            else:
+                self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
+            
+            # Define output path structure
+            self._sample_dir = self._results_dir / self._sample_id
+            self._job_dir = self._sample_dir / "jobs"
+            self._log_dir = self._sample_dir / "logs"
+            self._tmp_dir = self._sample_dir / "tmp"
+            
+            # Uncomment to enable per-chr parallelization 
+            # if (
+            #     "per_chr" in self.pipeline_inputs.cl_inputs.args
+            #     and self.pipeline_inputs.cl_inputs.args.per_chr
+            #     and self._region is not None
+            # ):
+            #     self._input_dir = self._sample_dir / self._region
+            #     self._reports_dir = self._input_dir / "reports"
+            #     self._tmp_dir = self._input_dir / "tmp"
+            #     self._scratch_dir = self._input_dir / "scratch"
+            
+            # Ensure output path structure exists
+            self.pipeline_inputs.cl_inputs.create_a_dir(self._results_dir)
+            self.pipeline_inputs.cl_inputs.create_a_dir(self._sample_dir)
+            self.pipeline_inputs.cl_inputs.create_a_dir(self._job_dir)
+            self.pipeline_inputs.cl_inputs.create_a_dir(self._log_dir)
+            self.pipeline_inputs.cl_inputs.create_a_dir(self._tmp_dir)
+            
+            if "cue" in self._model_type.lower():
+                self._reports_dir = self._sample_dir / "reports"
+                self.pipeline_inputs.cl_inputs.create_a_dir(self._reports_dir)
+            elif "deepvariant" in self._model_type.lower():
+                # Confirm a PopVCF containing allele frequency data was provided by the user
+                if self.pipeline_inputs.cl_inputs.args.pop_file is None:
+                    self.pipeline_inputs.cl_inputs.logger.info(
+                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: invalid --allele-freq; unable to use the custom bovine-trained checkpoint without a PopVCF.\nExiting now...",
+                    )
+                    exit(1)
+                
+                self._pop_vcf = TestFile(
+                    file=Path(self.pipeline_inputs.cl_inputs.args.pop_file).resolve(),
+                    logger=self.pipeline_inputs.cl_inputs.logger)
+            
+                self._pop_vcf.check_existing()
+            
+                if not self._pop_vcf.file_exists:
+                    self.pipeline_inputs.cl_inputs.logger.info(
+                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease update --allele-freq to include an existing PopVCF.\nExiting now...",
+                    )
+                    exit(1)
+    
+    def setup_variables(self) -> None:
+        """
+        Establish a model-specific list of variables saved as nested dictionaries.
+        """         
+        # Create an initial sub-dictionary for a single variant aller
+        if self._model_type not in self._variables.keys():
+            self.pipeline_inputs.cl_inputs.add_to_dict(
+                update_dict=self._variables,
+                new_key=self._model_type,
+                new_val=dict(),
+            )
+        
+        # --------------------------------------------------  
+        # Reference Genome 
+        # -------------------------------------------------- 
+        # Add container binding path to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="ref_path",
+            new_val=str(self.pipeline_inputs.cl_inputs.args.ref_file.parent),
+        )
+        # Add checkpoint prefix to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="ref_name",
+            new_val=str(self.pipeline_inputs.cl_inputs.args.ref_file.name),
+        )
+        
+        # --------------------------------------------------  
+        # Reference Genome - default regions BED file
+        # -------------------------------------------------- 
+        # Add container binding path to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="region_path",
+            new_val=str(self.pipeline_inputs._default_BED_file.path_only),
+        )
+        # Add checkpoint prefix to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="region_name",
+            new_val=str(self.pipeline_inputs._default_BED_file.file_name),
+        )
+        
+        # -------------------------------------------------- 
+        # Model Checkpoint
+        # --------------------------------------------------
+        # Add container binding path to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="ckpt_path",
+            new_val=str(self.pipeline_inputs.variant_callers[self._model_type]["checkpoint_path"]),
+        )
+        # Add checkpoint prefix to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="ckpt_name",
+            new_val=self.pipeline_inputs.variant_callers[self._model_type]["checkpoint_name"],
+        )
+        
+        # --------------------------------------------------  
+        # Reads file (BAM or CRAM input)
+        # -------------------------------------------------- 
+        # Add container binding path to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="reads_path",
+            new_val=str(self._reads_path.parent),
+        )
+        # Add checkpoint prefix to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="reads_name",
+            new_val=str(self._reads_path.name),
+        )
+        
+        # -------------------------------------------------- 
+        # Output VCF (perhaps gVCF in the future)
+        # -------------------------------------------------- 
+        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        
+        # Add container binding path to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="output_path",
+            new_val=str(_default_output.path.parent),
+        )
+        # Add checkpoint prefix to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="output_name",
+            new_val=str(_default_output.path.name),
+        )
+        
+        # -------------------------------------------------- 
+        # Temp Directory
+        # -------------------------------------------------- 
+        # Add container binding path to model-specific variables
+        self.pipeline_inputs.cl_inputs.add_to_dict(
+            update_dict=self._variables[self._model_type],
+            new_key="temp_path",
+            new_val=str(self._tmp_dir),
+        )
+         
+        # -------------------------------------------------- 
+        # Population VCF -- no genotypes (DeepVariant Only)
+        # --------------------------------------------------
+        if self._model_type == "DeepVariant":
+            # Add container binding path to model-specific variables
+            self.pipeline_inputs.cl_inputs.add_to_dict(
+                update_dict=self._variables[self._model_type],
+                new_key="pop_path",
+                new_val=str(self._pop_vcf.path.parent),
+            )
+            # Add checkpoint prefix to model-specific variables
+            self.pipeline_inputs.cl_inputs.add_to_dict(
+                update_dict=self._variables[self._model_type],
+                new_key="pop_name",
+                new_val=self._pop_vcf.path.name,
+            )    
+    
+    def init_genome(self) -> None:
+        """
+        Setup a 'Genome()' object.
+        """
+        self.get_status()
+        
+        if len(self.pipeline_inputs.variant_callers.keys()) == 1:
+            self._model_type = list(self.pipeline_inputs.variant_callers.keys())[0]
+            
+            self.set_paths()
+                        
+            if self._sample_id is not None:
+                self.set_outputs(verbose=True)
+                
+                # Uncomment to use g.vcfs (with DeepVariant only)
+                # self.set_outputs(verbose=True, format="g.vcf")
+                
+                _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+
+                # self._outputs = PostProcessVCF(genome=self)
+                # self._outputs.check_all_outputs(group_name=self.group_name, verbose=True)
+            
+                if (
+                    _default_output.file_exists is False
+                    # self._missing_output
+                    # or self._outputs._missing_any_outputs
+                    or self.pipeline_inputs.cl_inputs.overwrite
+                    ):
+                        if "deepvariant" in self._model_type.lower():
+                            self.setup_variables()
+                        
+                        # Uncomment for happy, or per-chr parallelization
+                        # self.create_extra_dirs()
+                        
+                        if "cue" in self._model_type.lower() and self._region is None:
+                            self.add_symlinks()
+                        return
+                else:
+                    print("ALL OUTPUTS DETECTED!")
+                    breakpoint()
+            else:
+                print("HELP ME, I'M BROKEN")
+                breakpoint()
+                # self._outputs = PostProcessVCF(genome=self)
+        else:
+            print("EDIT TO ENABLE MULTIPLE VARIANT CALLERS")
+            breakpoint()
+    
+    def check_pickle(self, input: File) -> None:
+        """
+        Confirms if a Genome() object was successfully pickled.
+
+        Args:
+            input (File): _description_
+
+        Raises:
+            FileNotFoundError: _description_
+        """
+        self._pickle_file = input
+        self._pickle_file.check_status(should_file_exist=True)
+        if not self._pickle_file.file_exists:
+            if not self.pipeline_inputs.cl_inputs.dry_run_mode:
+                raise FileNotFoundError(
+                    f"missing required file | '{self._pickle_file.file_name}'"
+                )
+    
+    def init_science(self) -> None:
+        """
+        Setup the lines of science within an SBATCH.
+        """
+        self._science = Science(genome=self)
+        
+        # Uncomment to enable per-chrom optimization
+        # self._science = Science(genome=self, chr_name=self._chrom)
+        
+        self._science.build_job_name()
+        
+        print("JOB NAME:", self._science._job_name)
+        print("JOB FILE:", self._science._jobfile_str)
+
+        if "deepvariant" in self._model_type.lower():
+            self._science.build_deepvariant_cmd()
+            print("ADD A BUILD DV COMMAND HERE!")
+            breakpoint()
+        
+        # Uncomment to use Cue
+        # elif "cue" in self._model_type.lower():
+        #     self._science.build_cue_cmd()
+        else:
+            print("BROKEN")
+            breakpoint()
+
+        if self._new_lines:
+            self._science.update_command(cmd_list=self._new_lines)
+    
