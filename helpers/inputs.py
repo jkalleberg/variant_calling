@@ -1,6 +1,13 @@
+#!/usr/bin/python3
+"""
+description: handler for generic command line inputs
+
+example usage: from helpers.inputs import InputManager
+
+"""
 from argparse import Namespace
 from logging import Logger
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 
