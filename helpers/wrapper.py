@@ -7,12 +7,15 @@ usage:
 """
 from datetime import datetime
 
-def timestamp():
+def timestamp(date_only: bool = False) -> str:
     """
     Provide the current time in human readable format.
     """
     current_datetime = datetime.now()
-    formatted_time = current_datetime.strftime("%Y-%m-%d  %H:%M:%S")
+    if date_only:
+        formatted_time = current_datetime.strftime("%y%m%d")
+    else:
+        formatted_time = current_datetime.strftime("%Y-%m-%d  %H:%M:%S")
     return str(formatted_time)
 
 
