@@ -256,6 +256,12 @@ def __init__() -> None:
     _pipeline_inputs = PipelineInputManager(cl_inputs=_cl_inputs,
                                             variant_callers=_variant_callers)
     
+    # Create a PICARD reference .dict file, if necessary
+    _pipeline_inputs.find_ref_dict()
+    _pipeline_inputs.transform_dictionary()
+    
+    # Create a 'default regions BED file' to exclude the unmapped contigs and MT genome
+    _pipeline_inputs.default_regions_BED()
     
     run.end_module()
 
