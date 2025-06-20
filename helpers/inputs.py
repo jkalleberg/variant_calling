@@ -9,7 +9,7 @@ from argparse import Namespace
 from logging import Logger
 from dataclasses import dataclass
 from pathlib import Path
-
+from json import load
 
 @dataclass
 class InputManager:
@@ -51,3 +51,17 @@ class InputManager:
                         f"{self.logger_msg}: creating a new directory | '{str(dir_name)}'"
                     )
                 dir_name.mkdir(exist_ok=True, parents=True)
+    
+    def load_slurm_resources(self) -> None:
+        """
+        Open the JSON config file, and confirm the user provided the 'ntasks' parameter as required by Cue
+        """
+        with open(str(self.args.resource_config), mode="r") as file: # type: ignore
+            self.resource_dict = load(file)
+
+        # This is only required for Cue, so update accordingly when updating generic variant caller
+        # check_resources = [key for key in self.resource_dict.keys() if key.lower() in 'ntasks']
+
+        # if not check_resources:
+        #     self.inputs.logger.error(f"{self.inputs.logger_msg}: missing the 'ntasks' SBATCH parameter in resources file | {self.inputs.args.resource_config}\nExiting...")
+        #     exit(1)
