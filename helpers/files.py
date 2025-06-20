@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from logging import Logger
 from pathlib import Path
 from typing import Dict, List, Union, TYPE_CHECKING
-from pickle import load
+from pickle import HIGHEST_PROTOCOL, dump, load
 import pandas as pd
 import json
 
@@ -18,6 +18,7 @@ from helpers.suffix import remove_suffixes
 
 if TYPE_CHECKING:
     from helpers.inputs import InputManager
+    from pipeline.genome import Genome
 
 
 class TestFile:
@@ -297,6 +298,43 @@ class File:
                 index=keep_index,
                 header=keep_header,
             )
+    
+    def write_pickle(self, obj: Union["Genome", Dict[int, List[str]]]) -> None:
+        """
+        Save a dataclass object to a file, for use with downstream scripts.
+
+        Parameters
+        ----------
+        obj : Type[&quot;Genome&quot;]
+            custom dataclass containing all data for a specific sample
+        """
+        self._test_file.check_missing()
+
+        if not isinstance(obj, dict):
+            _msg = obj._log_msg
+        else:
+            _msg = self.cl_inputs.logger_msg
+
+        if self.cl_inputs.dry_run_mode:
+            if self._test_file.file_exists:
+                _info = "pretending to re-write the existing"
+            else:
+                _info = "pretending to write a new"
+        else:
+            if self._test_file.file_exists:
+                _info = "re-writing the existing"
+            else:
+                _info = "writing a new"
+        
+        self.cl_inputs.logger.info(
+                f"{_msg}: {_info} pickle file | '{self._test_file.file}'"
+            )
+        
+        if self.cl_inputs.dry_run_mode:
+            return
+        else:
+            with open(str(self._test_file.path), "wb") as outp:
+                dump(obj, outp, HIGHEST_PROTOCOL)
 
     def load_txt_file(self) -> None:
         """
