@@ -256,6 +256,28 @@ def __init__() -> None:
                 
     # Load in SLURM resource config file
     _cl_inputs.load_slurm_resources()
+    
+    # Determine the variant caller(s) requested by the user
+    # Currently supported valid options:
+    #   DeepVariant v1.4.0
+    # In future, we plan to support:
+    #   DeepVariant v1.5.0+
+    #   DeepTrio v1.5.0
+    #   Cue v####
+    # NOTE: this process expects the input checkpoint to be formatted as:
+    #       ./<MODEL_TYPE>/<MODEL_VERSION>/<CHECKPOINT_NAME>
+    
+    # Extract info about the model(s) requested
+    _variant_callers = dict()
+    for ckpt in _ckpt_list:
+        _checkpoint_path = Path(ckpt).resolve()
+        _model_type = _checkpoint_path.parent.parent.name
+        _model_version = _checkpoint_path.parent.name
+        _checkpoint_name = _checkpoint_path.name
+        _variant_callers[_model_type] = {"version": _model_version,
+                                         "checkpoint_name": _checkpoint_name,
+                                         "checkpoint_path": _checkpoint_path.parent}
+    
     # Prepare pipeline-specific inputs
     _pipeline_inputs = PipelineInputManager(cl_inputs=_cl_inputs,
                                             variant_callers=_variant_callers)
