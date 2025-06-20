@@ -1,3 +1,9 @@
+# Ignore large checkpoint weight files
+*.model.ckpt.data-00000-of-00001
+*.index
+*.meta
+*.example_info.json
+
 # Ignore conda envs
 miniconda_envs/
 
