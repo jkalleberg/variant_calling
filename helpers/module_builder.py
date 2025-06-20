@@ -88,6 +88,13 @@ class CustomModule:
             help="If True, display results to the screen, rather than to a file.",
             action="store_true",
         )
+        self._parser.add_argument(
+            "-v",
+            "--version",
+            action="version",
+            version="%(prog)s version 0.1",
+            help="show program's version number and exit",
+    )
 
     def collect_args(self, manual_args: Union[List[str], None] = None) -> None:
         """
