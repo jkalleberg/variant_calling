@@ -13,6 +13,8 @@ abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
 path.append(module_path)
 
+# from helpers.files import File
+from helpers.utils import partial_match_case_insensitive, check_if_all_same, iterdir_with_prefix
 from helpers.module_builder import CustomModule
 
 def __init__() -> None:
@@ -176,6 +178,17 @@ def __init__() -> None:
             _ckpt_list = run.args.model_prefix.split(",")
         else:
             _ckpt_list = [run.args.model_prefix]
+        
+        # Check for supported variant callers
+        _use_deepvariant = partial_match_case_insensitive("deepvariant", _ckpt_list)
+        _use_cue = partial_match_case_insensitive("cue", _ckpt_list)
+        
+        # Confirm at least one supported variant caller was provided
+        _no_valid_checkpoint = check_if_all_same([_use_deepvariant, _use_cue], None)
+        assert (_no_valid_checkpoint is False), f"unable to find a supported checkpoint (e.g., DeepVariant or Cue) | '{run.args.model_prefix}'"
+        
+        # Save the list as a new command-line argument
+        run.args.model_prefix = [Path(p) for p in _ckpt_list]
         
     except AssertionError as error:
         run.logger.error(f"{error}.\nExiting... ")

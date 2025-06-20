@@ -123,3 +123,55 @@ def phredGQ_to_Eprob(gq_value: int) -> float:
     print(f"ERROR PROB @ GQ={gq_value}:\t{prop_error_prob:.09f}%")
 
     return error_prob
+
+def partial_match_case_insensitive(
+    search_string:str = "app",
+    list_of_strings: List[str] = ["Apple", "banana", "Cherry", "apricot", "grapefruit"]) -> Union[List[str], None]:
+    """
+    Finds partial string matches in a list, ignoring case.
+
+    Args:
+        search_string: The string to search for.
+        list_of_strings: The list of strings to search within.
+
+    Returns:
+      A list of strings from the input list that contain the search string, ignoring case.
+    """
+    search_string = search_string.casefold()
+    matches_found = [s for s in list_of_strings if search_string in s.casefold()]
+    if matches_found:
+        return matches_found
+    else:
+        return
+    
+# def check_file_case_insensitive(filename: Union[str, Path], expected_filename: str) -> Union[Path, None]:
+#     """
+#     Checks if a file exists, case-insensitively.
+
+#     Args:
+#         filename: The path to the existing file (string or Path object)
+#         expected_filename: The name of the file to check (a lowercase string).
+
+#     Returns:
+#         True if the file exists (case-insensitive), False otherwise.
+#     """
+#     filepath = Path(filename).resolve()
+#     target_lower = str(expected_filename).lower()
+#     if filepath.is_file() and str(filepath).lower() == target_lower:
+#         return filepath
+
+def iterdir_with_prefix(absolute_path: Union[str,Path], prefix: str, valid_suffixes: List[str]):
+    """
+    Iterates over the files and directories in a given path that start with the specified prefix.
+
+    Args:
+        path: The path to iterate over.
+        prefix: The prefix to filter by.
+
+    Yields:
+        Path: Path objects that match the prefix.
+    """
+    directory = Path(absolute_path)
+    return [directory / item for item in directory.iterdir() if (item.name.startswith(prefix) and item.is_file() and item.suffix.lower() in valid_suffixes)]
+
+
