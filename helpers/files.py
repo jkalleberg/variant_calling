@@ -264,13 +264,26 @@ class File:
                 else:
                     self.cl_inputs.logger.info(f"{self.cl_inputs.logger_msg}: {logging_msg}")
 
+    def write_dataframe(self,
+                        df: pd.DataFrame,
+                        keep_index: bool = False,
+                        keep_header: bool = True,
+                        delim: str = ",") -> None:
+        if delim == ",":
+            _format = "CSV"
+        elif delim == "\t":
+            _format = "TSV"
+        else:
+            _format = f"'{delim}'-separated"
+        
         if self.cl_inputs.dry_run_mode:
             self.cl_inputs.logger.info(
                 f"{self.cl_inputs.logger_msg}: pretending to write {_format} file | '{str(self.path)}'"
             )
 
             print("---------------------------------------------")
-            print(df)
+            # Print the DataFrame without headers and without the index
+            print(df.to_csv(sep=delim, header=keep_header, index=keep_index))
             print("---------------------------------------------")
         else:
             self.cl_inputs.logger.info(
@@ -280,7 +293,9 @@ class File:
                 str(self.path),
                 doublequote=False,
                 quoting=QUOTE_NONE,
+                sep=delim,
                 index=keep_index,
+                header=keep_header,
             )
 
     def load_txt_file(self) -> None:
