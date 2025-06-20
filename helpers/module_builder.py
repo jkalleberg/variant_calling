@@ -65,7 +65,7 @@ class CustomModule:
             dest="input",
             type=str,
             help="[REQUIRED]\ninput path\nIf a directory is provided, multiple inputs will be identified.\nIf a file is provided, only that file will be used as input.",
-            metavar="</path/to/file>",
+            metavar="</path/to/dir/> or </path/to/file>",
         )
         self._parser.add_argument(
             "--overwrite",
@@ -104,13 +104,7 @@ class CustomModule:
             self.args = self._parser.parse_args()
         else:
             self.args = self._parser.parse_args(manual_args)
-
-    def check_args(self) -> None:
-        """
-        With "--debug", display command line args provided.
-        With "--dry-run", display a msg.
-        Then, check to make sure all required flags are provided.
-        """
+        
         if self.args.debug:
             str_args = "COMMAND LINE ARGS USED: "
             for key, val in vars(self.args).items():
@@ -123,14 +117,21 @@ class CustomModule:
                 "[DRY_RUN]: output will display to screen and not write to a file"
             )
 
+    def check_args(self) -> None:
+        """
+        With "--debug", display command line args provided.
+        With "--dry-run", display a msg.
+        Then, check to make sure all required flags are provided.
+        """
+
         assert (
             self.args.out_path
-        ), "missing --output; Please provide a file name to save results."
+        ), "missing [REQUIRED] flag: --output; Please provide a directory or file name for saving results."
 
         assert (
             self.args.input
-        ), "missing --input; Please provide either a directory location or an existing file containing metrics to plot."
-
+        ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file containing a list of BAM/CRAM files to process."
+    
     def process_args(self) -> None:
         """
         Handle expected defaults provide at the command line.
