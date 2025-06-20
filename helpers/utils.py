@@ -8,6 +8,8 @@ usage:
 import logging
 from random import randint
 from typing import List, Union
+from math import log10
+from pathlib import Path
 
 from helpers.logger import get_stream_handler
 
@@ -123,6 +125,33 @@ def phredGQ_to_Eprob(gq_value: int) -> float:
     print(f"ERROR PROB @ GQ={gq_value}:\t{prop_error_prob:.09f}%")
 
     return error_prob
+
+# def clean_str(txt: str) -> str:
+#     """
+#     Handle any special characters and remove any separators.
+
+#     Input: 'A,Quick brown-fox jumped-over-the   lazy-dog'
+#     Output: 'AQuickbrownfoxjumpedoverthelazydog'
+#     """
+#     specialChars = "!#$%^&*()"
+#     for specialChar in specialChars:
+#         txt = txt.replace(specialChar, "")
+#     standardizeSeps = " -,_"
+#     for sep in standardizeSeps:
+#         txt = txt.replace(sep, "")
+#     return txt
+
+def count_digits(number: int) -> int:
+    """
+    Count how many digits are in a numerical value.
+
+    Args:
+        number (int): any numerical value
+
+    Returns:
+        int: how many digits were found
+    """
+    return int(log10(abs(number))) + 1 if number else 1
 
 def partial_match_case_insensitive(
     search_string:str = "app",
