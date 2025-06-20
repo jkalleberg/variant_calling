@@ -198,6 +198,60 @@ def __init__() -> None:
     run.process_args()
     
     # ENTER CUSTOM SUB-MODULES HERE!
+    # Handle custom inputs needed for the generic variant calling pipeline
+    _cl_inputs = InputManager(
+        args=run.args,
+        logger=run.logger,
+        phase="setup",
+    )
+    _cl_inputs.update_mode()
+    _cl_inputs.create_logging_msg()
+     
+    # REFERENCE: Confirm a .fai index file exists prior to running PICARD CreateSequenceDict()
+    for file in _reference_files:
+        if "fai" in file.suffix.lower():
+            # Update the command-line args to point to the FASTA file as a Path()
+            run.args.ref_file  = Path(file).parent / Path(file).stem
+        
+    if isinstance(run.args.ref_file, Path) and run.args.ref_file.is_file():
+        if _cl_inputs.debug_mode:
+            run.logger.debug(f"{_cl_inputs.logger_msg}: valid --reference FASTA file | '{run.args.ref_file}'")
+    else:
+        _files_found = ",".join(_reference_files)
+        run.logger.error(f"{_cl_inputs.logger_msg}: missing a .fai index file in reference genome directory\nFiles found: {_files_found}")
+    
+    # INPUT PATH: Determine if a file name was given as output, when it should be a directory
+    if run._input_path.stem != run._input_path.name:
+        # Confirm input is an existing file
+        if run._input_path.is_file():
+            if _cl_inputs.debug_mode:
+                run.logger.debug(f"{_cl_inputs.logger_msg}: valid --input; detected an existing file.")
+        else:
+            run.logger.error(f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {run._input_path}\nExiting...")
+            exit(1)
+    else:
+        # TO DO: enable providing an input directory (e.g., samples + metadata together)?
+        run.logger.error(f"invalid --input; expected the absolute path to a file, did you enter a directory? | {run._input_path}\nExiting...")
+        exit(1)
+
+    # OUTPUT PATH: Determine if a file name was given as output, when it should be a directory
+    if run._output_path.stem != run._output_path.name:
+        run.logger.error(f"invalid --output-path; expected the absolute path to a directory, did you enter a file? | {run._output_path}\nExiting...")
+        exit(1)
+    else:
+        # Create a new directory, if necessary 
+        if not run._output_path.exists():
+            _cl_inputs.create_a_dir(dir_name=run._output_path)
+        else:
+            if _cl_inputs.debug_mode:
+                run.logger.debug(f"{_cl_inputs.logger_msg}: valid --output-path; detected an existing directory.")
+    
+    # Save valid command-line inputs
+    _cl_inputs._output_path = run._output_path
+    _cl_inputs._input_path = run._input_path
+                
+    # Load in SLURM resource config file
+    _cl_inputs.load_slurm_resources()
     
     run.end_module()
 
