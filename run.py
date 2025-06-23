@@ -123,7 +123,7 @@ def __init__() -> None:
             "--allele-freq", 
             "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
             
-            "--dry-run",
+            # "--dry-run",
             # "--debug",
             # "--overwrite",
             
