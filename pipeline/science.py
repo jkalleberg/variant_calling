@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, List, Union
 from os import getcwd, sched_getaffinity
 from multiprocessing import cpu_count
 import re
+from spython.main import Client
 
 if TYPE_CHECKING:
     from genome import Genome
@@ -29,6 +30,9 @@ class Science:
     chr_name: Union[None, str] = None
 
     # internal parameters
+    _base_binding: str = field(
+        default="/usr/lib/locale/:/usr/lib/locale/", init=False, repr=False
+    )
     _n_lines: Union[int, None] = field(init=False, repr=False, default=None) 
     _job_name: Union[str, None] = field(init=False, repr=False, default=None)
     _command_list: List[str] = field(init=False, repr=False, default_factory=list)
@@ -96,7 +100,7 @@ class Science:
         """
         Create the path bindings for Apptainer/Singularity
         """
-        bindings = ["/usr/lib/locale/:/usr/lib/locale/", f"{getcwd()}/:/run_dir/"]
+        bindings = self._base_binding + [f"{getcwd()}/:/run_dir/"]
         
         # Only select the variable PATHs, ignoring the file name(s) for now        
         _variable_paths = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "path" in key.lower()}
@@ -141,6 +145,21 @@ class Science:
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
             self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: number of {_label} processing units | '{self._nproc}'")  
 
+    def get_help(self) -> None:
+        """
+        Display the help page for the program within the container used (make_examples)
+        """
+        self.setup_container()
+        get_help = Client.execute(  # type: ignore
+            self._container,
+            # Uncomment for DeepTrio
+            # ["/opt/deepvariant/bin/deeptrio/run_deeptrio", "--helpfull"],
+            ["/opt/deepvariant/bin/run_deepvariant", "--helpfull"],
+            bind=[self._base_binding],
+        )
+        print(get_help["message"])
+        # print(get_help["message"][0])
+    
     def build_deepvariant_cmd(self,
                               sequence_type: str = "WGS",
                               ) -> None:
@@ -165,7 +184,7 @@ class Science:
             if "ref" in k:
                 flags.append(f"--ref=/{_binding}/{v}")
             elif "region" in k:
-                flags.append(f"--region_file=/{_binding}/{v}")
+                flags.append(f"--regions=/{_binding}/{v}")
             elif "ckpt" in k:
                 flags.append(f"--customized_model=/{_binding}/{v}")
             elif "reads" in k:

@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from sys import path, exit
 from typing import Dict, List, Union, TYPE_CHECKING
-# from os import sched_getaffinity
-# from sys import exit
+from sys import exit
+
 
 if TYPE_CHECKING:   
     from input import PipelineInputManager
@@ -25,7 +25,6 @@ from helpers.files import File, TestFile
 from pipeline.science import Science
 from helpers.sbatch import SBATCH
 from helpers.sbatch import SubmitSBATCH
-
 # from pipeline.postprocess_vcf import PostProcessVCF
 
 @dataclass
@@ -434,7 +433,7 @@ class Genome:
                     f"missing required file | '{self._pickle_file.file_name}'"
                 )
     
-    def init_science(self) -> None:
+    def init_science(self, get_help: bool = False) -> None:
         """
         Setup the executable lines of science within an SBATCH.
         """
@@ -454,7 +453,11 @@ class Genome:
             ):
         
             if "deepvariant" in self._model_type.lower():
-                self._science.build_deepvariant_cmd()
+                if get_help:
+                    self._science.get_help()
+                    exit(0)
+                else:
+                    self._science.build_deepvariant_cmd()
                 
                 # Review the newly created BASH command(s)
                 if self.pipeline_inputs.cl_inputs.debug_mode:

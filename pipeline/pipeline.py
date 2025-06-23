@@ -265,6 +265,7 @@ class Pipeline:
                     f"{self.pipeline_inputs.cl_inputs.logger_msg} --overwrite=True; re-writing the existing output file | '{_default_output.file_name}'"
             )
         
+        # genome.init_science(get_help=True) # uncomment to only produce the manual for DeepVariant
         genome.init_science()        
         genome.init_job()
         self._result = genome.submit_job()

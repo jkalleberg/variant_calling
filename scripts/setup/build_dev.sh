@@ -36,16 +36,17 @@ conda install -p ./miniconda_envs/dev -y pip python numpy scipy pyfaidx pysam py
 
 conda install -p ./miniconda_envs/dev -y bitarray cachetools intervaltree joblib matplotlib pycocotools python-dateutil pyyaml seaborn
 
-conda install -p ./miniconda_envs/dev -y python-dotenv regex natsort mkdocs mkdocs-material black 
+conda install -p ./miniconda_envs/dev -y python-dotenv regex natsort mkdocs mkdocs-material black spython
 
 
 ###===== Notes about specific packages =====###
-### Python = 
+### Python = version required? 
 ### Scipy = scientific libraries for Python
 ### DotEnv = enables environment variable configuration across bash and python
 ### Regex = required for update regular expression handling
 ### Natsort = enables sorting of file iterators
 ### Mkdocs & Mkdocs-Material = used for writing Github documentation
 ### Black = Python formatter
+### Spython = Module for executing within a Singlarity container from a Python script
 
 echo -e "=== scripts/setup/build_dev.sh > end $(date)"
