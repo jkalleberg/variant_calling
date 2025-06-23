@@ -98,9 +98,11 @@ class PipelineInputManager:
                     f"{self.cl_inputs.logger_msg}: found a PICARD reference dictionary... SKIPPING AHEAD",
                     )
     
-    def transform_dictionary(self, exclude_chrs_list: List[str] = ["MT", "M", "EBV"]) -> None:
+    def transform_dictionary(self, exclude_chrs_list: Union[None, List[str]] = None) -> None:
         """
         Transform the PICARD reference genome's .DICT file into a pandas DataFrame for easier manipulations.
+        
+        NOTE: For human genomes, use exclude_chrs_list=["M", "EBV"]
         """
         input_data = read_csv(
             self._ref_dict_file.file,
@@ -114,8 +116,8 @@ class PipelineInputManager:
         # Identify the chromosome/scaffolds naming conventions of the reference genome
         chromosome_names = input_data[1].str.split(":", n=1, expand=True)[1] # a pd.Series()
         
-        # Uncomment for Cue
-        # exclude_list = ["X", "Y", "MT", "M", "EBV"]
+        if exclude_chrs_list is None:
+            exclude_chrs_list = list()
 
         # TO DO: Make 'unmapped_reads' a list? or perhaps go back to "ignore_chrs" flag?
         if self.cl_inputs.args.unmapped_reads and self.cl_inputs.args.unmapped_reads not in exclude_chrs_list: 
