@@ -75,11 +75,9 @@ class Pipeline:
                 continue
             
             for variant_caller in self.pipeline_inputs.variant_callers.keys():
-                _updated_logger_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg} - [run_{variant_caller}]"
+                _original_logger_msg = self.pipeline_inputs.cl_inputs.logger_msg 
+                
                 lab_id = g[1][0]
-                self.pipeline_inputs.cl_inputs.logger.info(
-                        f"{_updated_logger_msg}: FOUND GENOME '{lab_id}' @ ITERATION '{g[0]}'"
-                    )
 
                 # Uncomment if adding --check-samples arg
                 # if self._previously_run_samples:
@@ -95,69 +93,160 @@ class Pipeline:
                 )
                 _genome.init_genome()
                 
+                _updated_logger_msg = f"{_genome._log_msg} - [run_{variant_caller}]"
+                # _genome_pickle.cl_inputs.logger_msg = _updated_logger_msg
+                _genome._log_msg = _updated_logger_msg
+                
+                if self.pipeline_inputs.cl_inputs.debug_mode:
+                    self.pipeline_inputs.cl_inputs.logger.debug(
+                            f"{_updated_logger_msg}: FOUND GENOME '{lab_id}' @ ITERATION '{g[0]}'"
+                        )
+                
+                # Create a temporary logger msg
+                self.pipeline_inputs.cl_inputs.logger_msg = _updated_logger_msg
+                
                 # Check for the expected output file produced by a specific variant caller
                 _default_output = _genome.pipeline_inputs.variant_callers[variant_caller]["default_output"]
                 
-                # if (
-                    #     # not _genome._missing_output
-                    #     # Uncomment for Cue
-                    #     # and not _genome._outputs._missing_any_outputs
-                    #     and not self.pipeline_inputs.cl_inputs.args.overwrite
-                    # ):
-                
-                # Identify the pickled data for a specific variant caller
-                if "deepvariant" in variant_caller.lower():
-                    _pickle_dir = _genome._sample_dir
-                elif "cue" in variant_caller.lower():
-                    _pickle_dir = _genome._reports_dir
-                else:
-                    print("LOOK HERE")
-                    breakpoint()
-                    
-                _genome_pickle = File(
-                    path_to_file=_pickle_dir / f"{_genome._sample_id}.pkl",
-                    cl_inputs=self.pipeline_inputs.cl_inputs,
-                )
-                
+                # OUTPUT EXISTS!
                 if _default_output.file_exists and not self.pipeline_inputs.cl_inputs.overwrite:
-                    # OUTPUT EXISTS!
                     self.pipeline_inputs.cl_inputs.logger.info(
                         f"{_updated_logger_msg}: found all outputs for sample '{_genome._sample_id}'... SKIPPING AHEAD"
                     )
+                    self._job_ids.insert(i, None)
                     self._skip_counter += 1
+                
+                # OUTPUT DOES NOT EXIST! OR USER WANTS TO RE-SUBMIT
                 elif _default_output.file_exists is False or self.pipeline_inputs.cl_inputs.overwrite: 
-                    # OUTPUT DOES NOT EXIST!
+                    
+                    # Identify the pickled data for a specific variant caller
+                    if "deepvariant" in variant_caller.lower():
+                        _pickle_dir = _genome._sample_dir
+                    elif "cue" in variant_caller.lower():
+                        _pickle_dir = _genome._reports_dir
+                    else:
+                        print("LOOK HERE")
+                        breakpoint()
+                        
+                    _genome_pickle = File(
+                        path_to_file=_pickle_dir / f"{_genome._sample_id}.pkl",
+                        cl_inputs=self.pipeline_inputs.cl_inputs,
+                    )
                     
                     # Save the 'Genome()' obj to a file for future use
                     _genome_pickle._test_file.check_missing()
                     _genome_pickle.write_pickle(obj=_genome)
                     _genome.check_pickle(input=_genome_pickle)
-                else:
-                    print("LOGIC FAILURE")
+                        
+                    if self.pipeline_inputs.cl_inputs.args.group_size > 50:
+                        # Sleep for <1 second before submission to SLURM queue via process_genome()
+                        # NOTE: helps to rate limit jobs submission within a second
+                        sleep(random())
+                    
+                    self.process_genome(genome=_genome)
+                    
+                    # Uncomment to enable per-chr optimization
+                    # if _genome._outputs._missing_any_outputs or self.pipeline_inputs.cl_inputs.overwrite:
+                    # if _per_chr_jobids:
+                    #     self.process_genome(prior_jobs=_per_chr_jobids)
+                    # else:
+                    #     self.process_genome()
+
+                    if str(self._result).isnumeric() or self._result is None:
+                        self._job_ids.insert(i, self._result)
+                    else:
+                        self._skip_counter += 1
+                    
+                    # Revert the logger message back to original
+                    self.pipeline_inputs.cl_inputs.logger_msg = _original_logger_msg
+                    print("END OF A SINGLE GENOME VARIANT CALLING")
                     breakpoint()
                     
-                if self.pipeline_inputs.cl_inputs.args.group_size > 50:
-                    # Sleep for <1 second before submission to SLURM queue via process_genome()
-                    # NOTE: helps to rate limit jobs submission within a second
-                    sleep(random())
-                
-                print("WHERE I LEFT OFF:")    
-                # print("GENOME:", _genome)
-                # breakpoint()
-                self.process_genome(genome=_genome)
-                breakpoint()
-                
-                # Uncomment to enable per-chr optimization
-                # if _genome._outputs._missing_any_outputs or self.pipeline_inputs.cl_inputs.overwrite:
-                # if _per_chr_jobids:
-                #     self.process_genome(prior_jobs=_per_chr_jobids)
-                # else:
-                #     self.process_genome()
+                 
 
-                if str(self._result).isnumeric() or self._result is None:
-                    self._job_ids.insert(i, self._result)
-                else:
-                    self._skip_counter += 1
+            
+
+    #         ## CLEAN UP ANY INTERMEDIATE FILES NOT CLEANED DURING SBATCH
+    #         if args.check_outputs:
+    #             clean_files = CleanUp(genome=_genome)
+    #             clean_files.remove_lg_intermediates()
+
+    #         if pipe._skip_counter == 0 and pipe._rerun_counter == 0:
+    #             _submitted_counter += 1
+
+    #         _skip_counter += pipe._skip_counter
+    #         _resubmission_counter += pipe._rerun_counter
+    #         total = _skip_counter + pipe._rerun_counter + _submitted_counter
+
+    #         halt_loop = pipe.break_into_chuncks(total, args.chunk_size)
+    #         if halt_loop:
+    #             iteration.inputs.logger.info(
+    #                 f"{inputs.logger_msg}: number of samples submitted | {_submitted_counter}"
+    #             )
+    #             iteration.inputs.logger.info(
+    #                 f"{inputs.logger_msg}: number of samples skipped | {_skip_counter}"
+    #             )
+    #             if iteration.inputs.args.check_outputs:
+    #                 iteration.inputs.logger.info(
+    #                     f"{inputs.logger_msg}: number of samples to re-run with CUE | {_resubmission_counter}"
+    #                 )
+
+    #             if _job_ids:
+    #                 start = total - args.chunk_size
+    #                 iteration.inputs.logger.info(
+    #                     f"{inputs.logger_msg}: CURRENT CHUNK JOB IDS | {_job_ids[start:total]}"
+    #                 )
+
+    #             iteration.inputs.logger.info(
+    #                 f"{inputs.logger_msg}: ITR={total}; WAITING HERE... press (c) to continue"
+    #             )
+    #             print("----------------------------------------------------------------")
+    #             breakpoint()
+
+    # if args.chunk_start:
+    #     _skip_counter = _skip_counter + (int(args.chunk_start) - 1)
+
+    # if _skip_counter == samples._total_num_genomes:
+    #     logger.info(f"{inputs.logger_msg}: There are no SLURM jobs to submit.")
+    # elif args.check_outputs:
+    #     logger.info(
+    #         f"{inputs.logger_msg}: {_resubmission_counter} samples need to be re-run."
+    #     )
+    #     if _resubmission_counter > 0:
+    #         logger.info(
+    #             f"{inputs.logger_msg}: Please update '--samples' to '{_samples_file}'"
+    #         )
+    # else:
+    #     CheckJobs(
+    #         iter=iteration,
+    #         slurm_jobs_list=_job_ids,
+    #         benchmarking_file=benchmarking_file,
+    #     ).check_submission() 
+    #         print("WHERE I LEFT OFF:")
+    #         breakpoint()
+
+# def handle_resubmissions(self) -> None:
+    #     """_summary_"""
+    #     # if "checking outputs" on a genome-wide basis...
+    #     if (
+    #         self.genome.iter.inputs.args.check_outputs
+    #         and not self.genome.iter.inputs.args.per_chr
+    #     ):
+    #         # then, create a new row in a new 'samples' file containing bam_paths for
+    #         # genomes that still need to be run with Cue
+    #         self.genome.save_new_inputs()
+    #         if self.genome.iter._samples_csv:
+    #             self._samples_file = str(self.genome.iter._samples_csv.file_path)
+    #             if not self.genome.iter._samples_csv._file._file_exists:
+    #                 self._rerun_counter = self.genome.iter._samples_csv._rows_added
+    #             else:
+    #                 self._rerun_counter = (
+    #                     self.genome.iter._samples_csv._existing_rows
+    #                     + self.genome.iter._samples_csv._rows_added
+    #                 )
+    #     else:
+    #         self._samples_file = None
+
     def process_genome(
         self,
         genome: "Genome",
@@ -174,10 +263,9 @@ class Pipeline:
                     f"{self.pipeline_inputs.cl_inputs.logger_msg} --overwrite=True; re-writing the existing output file | '{self.genome._default_vcf.file}'"
             )
         
-        genome.init_science() 
-        # self._result = genome.submit_job()
-        breakpoint()
-
+        genome.init_science()
+        genome.init_job() 
+        self._result = genome.submit_job()
         
             # Uncomment for Cue
             # # if missing raw CUE results completely...

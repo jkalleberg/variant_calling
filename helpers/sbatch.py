@@ -1,24 +1,25 @@
 #!/bin/python3
 """
-description: contains dataclasses for working with SLURM
+description: contains custom classes for working with SLURM
 
 usage:
     from sbatch import SBATCH, SubmitSBATCH
 """
 from dataclasses import dataclass, field
-from logging import Logger
-from pathlib import Path
+from regex import compile
+from typing import Dict, List, Union, TYPE_CHECKING
+from time import sleep
 from random import random
 from subprocess import run, CalledProcessError
-from sys import exit
-from time import sleep
-from typing import Union
-from regex import compile
+
+if TYPE_CHECKING:
+    from helpers.inputs import InputManager
+    from pathlib import Path
+    from helpers.files import File, TestFile
+    from regex import compile
 
 from helpers.files import TestFile
-from helpers.iteration import Iteration
-from helpers.utils import check_if_all_same
-from collect_job_nums import collect_job_nums
+from helpers.utils import check_if_all_same, collect_job_nums, generate_job_id
 
 
 @dataclass
@@ -26,56 +27,65 @@ class SBATCH:
     """
     Create a custom SBATCH class object, which results in an sbatch file.
     """
+    
+    # required parameters
+    cl_inputs: "InputManager"
+    command_list: List[str]
+    job_file: "File"
+    log_dir: "Path"
+    # variant_callers: Dict[str, Dict[str, str]]
 
-    itr: Iteration
-    job_name: str
-    error_file_label: Union[str, None]
-    handler_status_label: Union[str, None]
-    logger_msg: str
-    _command_list: list = field(init=False, repr=False, default_factory=list)
-    _header_lines: list = field(init=False, repr=False, default_factory=list)
-    _line_list: list = field(init=False, repr=False, default_factory=list)
+    # Optional parameters
+    handler_status_label: Union[str, None] = None
+    all_lines: List[str] = field(default_factory=list, init=False, repr=False)
+    
+    # Internal, immutable parameters
+    _header_lines: List[str] = field(default_factory=list, init=False, repr=False)
+    _job_name: Union[str,None] = field(default=None, init=False, repr=False)
+    _line_list: List[str] = field(default_factory=list, init=False, repr=False)
+    _start_conda: List[str] = field(default_factory=list, init=False, repr=False)
+    _start_sbatch: List[str] = field(default_factory=list, init=False, repr=False)
     _num_lines: Union[None, int] = None
+    
 
     def __post_init__(self) -> None:
-        self._jobfile = self.itr.job_dir / f"{self.job_name}.sh"
-        self._jobfile_str = str(self._jobfile)
-
-        if self.error_file_label is not None:
-            self._tracking_file = (
-                self.itr.log_dir / f"tracking-{self.error_file_label}.log"
-            )
-
+        
         self._header_lines = ["#!/bin/bash"]
 
-        self._start_conda = [
-            "source ${CONDA_BASE}/etc/profile.d/conda.sh",
-            "conda deactivate",
-        ]
-
-        if "modules" in self.itr.args:
-            test_modules = TestFile(self.itr.args.modules, logger=self.itr.logger)
+        # self._start_conda = [
+        #     "source ${CONDA_BASE}/etc/profile.d/conda.sh",
+        #     "conda deactivate",
+        # ]
+        
+        if "modules" in self.cl_inputs.args:
+            if self.cl_inputs.debug_mode:
+                self.cl_inputs.logger.debug(
+                    f"{self.cl_inputs.logger_msg}: cluster-specific software dependencies added | '{self.cl_inputs.args.modules}'"
+                )
+            test_modules = TestFile(
+                file=self.cl_inputs.args.modules,
+                logger=self.cl_inputs.logger,
+                )
             test_modules.check_existing()
 
             if not test_modules.file_exists:
-                self.itr.logger.error(
-                    f"{self.logger_msg}: module file provide does not exist | '{self.itr.args.modules}'\nExiting..."
+                self.cl_inputs.logger.error(
+                    f"{self.cl_inputs.logger_msg}: module file provide does not exist | '{self.cl_inputs.args.modules}'\nExiting..."
                 )
                 exit(1)
 
-        if self.itr.env is not None:
             self._start_sbatch = [
-                ". scripts/setup/modules.sh",
-                f". scripts/run/environment.sh {self.itr.env.env_file}",
-                "echo '=== Science Starts Now: '$(date '+%Y-%m-%d %H:%M:%S')",
+                f". {self.cl_inputs.args.modules}",
             ]
+        
+        if self._start_sbatch:
+            self._start_sbatch.append("echo '=== Science Starts Now: '$(date '+%Y-%m-%d %H:%M:%S')")
         else:
-            self._start_sbatch = [
-                ". scripts/setup/modules.sh",
-                "echo '=== Science Starts Now: '$(date '+%Y-%m-%d %H:%M:%S')",
-            ]
+            self._start_sbatch = ["echo '=== Science Starts Now: '$(date '+%Y-%m-%d %H:%M:%S')"]
+        
+        self._job_name = self.job_file.path.stem
 
-    def slurm_headers(self, use_job_array=False, **flags) -> None:
+    def create_slurm_headers(self, use_job_array=False) -> None:
         """
         Defines each SLURM flag and writes them in SBATCH header format.
 
@@ -87,14 +97,12 @@ class SBATCH:
               email="jakth2@mail.missouri.edu"
               )
         """
-        if self.itr.debug_mode:
-            self.itr.logger.debug(f"{self.logger_msg}: defining SBATCH headers... ")
-        for key, value in flags.items():
+        if self.cl_inputs.debug_mode:
+            self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: building SBATCH header lines...")
+        for key, value in self.cl_inputs.resource_dict.items():
             if key == "email":
                 if value != "":
                     self._header_lines.append(f"#SBATCH --mail-user={value}")
-                    # self._header_lines.append("#SBATCH --mail-type=FAIL,TIME_LIMIT,END")
-                    # self._header_lines.append("#SBATCH --mail-type=FAIL,END")
                     self._header_lines.append("#SBATCH --mail-type=FAIL")
             elif key == "CPUmem":
                 self._header_lines.append("#SBATCH --ntasks-per-core=1")
@@ -110,103 +118,134 @@ class SBATCH:
             else:
                 self._header_lines.append(f"#SBATCH --{key}={str(value)}")
 
-        self._header_lines.append(f"#SBATCH --job-name={self.job_name}")
-        if use_job_array is False:
-            self._header_lines.append(f"#SBATCH --output={self.itr.log_dir}/%x_%j.out")
-        # else:
-        #     self.header_lines.append(f"#SBATCH --array=1-{self.n_array_tasks}")
-        #     self.header_lines.append(f"#SBATCH --output={self.log_dir}/%x-%A-%a_%j.out")
+        self._header_lines.append(f"#SBATCH --job-name={self._job_name}")
+        
+        if use_job_array:
+            print("UPDATE SOURCE CODE FOR SLURM JOB ARRAYS!")
+            breakpoint()
+            # self.header_lines.append(f"#SBATCH --array=1-{self.n_array_tasks}")
+            self.header_lines.append(f"#SBATCH --output={self.log_dir}/%x-%A-%a_%j.out")
+        else:
+            self._header_lines.append(f"#SBATCH --output={self.log_dir}/%x_%j.out")        
 
         self._header_lines.append("echo '=== SBATCH running on: '$(hostname)")
         self._header_lines.append("echo '=== SBATCH running directory: '${PWD}")
         self._header_lines.extend(self._start_sbatch)
+        
+        # Review the newly created BASH command(s)
+        if self.cl_inputs.debug_mode:
+            self.cl_inputs.logger.debug(
+                f"{self.cl_inputs.logger_msg}: SBATCH HEADERS: -----------------------------------")
+            for line in self._header_lines:
+                self.cl_inputs.logger.debug(
+                f"{self.cl_inputs.logger_msg}: {line}")
+            self.cl_inputs.logger.debug(
+                f"{self.cl_inputs.logger_msg}: ---------------------------------------------------")
+            breakpoint()
 
-    def command_builder(self, command_list: list) -> None:
+    def update_content_list(self, new_content: List[str]) -> None:
         """
-        Creates a list to store lines of science performed by SBATCH job.
-        """
-        if self.itr.debug_mode:
-            self.itr.logger.debug(f"{self.logger_msg}: building science... ")
-        self._line_list.extend(command_list)
+        Edit or copy the content of a SBATCH script file, given a list of Bash commands.
 
-    def handle_errors(
-        self, message, status_tracker_file, error_handler_index: int = -1
+        Args:
+            new_list (List[str]): each item represents a single, executable Linux/Bash command.
+        """
+        if new_content == self.command_list and self.cl_inputs.debug_mode:
+           self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: copying SBATCH contents from Science()...") 
+        elif new_content != self.command_list and self.cl_inputs.debug_mode:
+            self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: modifying SBATCH contents from Science()...")
+        
+        self._line_list.extend(new_content)
+
+    def handle_subprocess_status(
+        self, 
+        message: Union[str, None] = None,
+        status_tracker_file: Union["TestFile", None] = None,
+        line_list_index: int = -1
     ) -> None:
         """
-        Captures the error code from a command.
+        Enables capturing the exit code from a sub-process within a SLURM job file.
+        
+        For example, if the sub-process fails (exit != 0), this error handler will capture and return the correct exit code.
+        The SLURM job script will have the same exit code, allowing SLURM to send the expected job failure email.
+        
+        Adding this to a specific line within the contents of a SLURM job will prevent running sub-process lines (after line_list_index) if the preceding sub-process fails.
 
-        If the job fails (exit != 0), this error handler
-        will use the errorcode to trigger a job failure email from
-        SLURM.
-
-        Enables interruption of future jobs, if the prior job fails.
+        Args:
+            message (Union[str, None], optional): a descriptive label of the sub-process. Defaults to None.
+            status_tracker_file (Union[&quot;TestFile&quot;, None], optional): a TestFile() object controlling where to write the status message. Defaults to None.
+            line_list_index (int, optional): select a specific line in the SBATCH content that must have a status check. Defaults to -1 (final line).
         """
-        if self.itr.debug_mode:
-            self.itr.logger.debug(f"{self.logger_msg}: adding error handler... ")
-        last_line = self._line_list[error_handler_index]
-        errors = f' && success_exit "{message}" {status_tracker_file} || error_exit "{message}" {status_tracker_file}'
-        if error_handler_index != -1:
-            errors = errors + " &"
-        error_handler = last_line + errors
-        self._line_list[error_handler_index] = error_handler
-
-    def check_sbatch_file(self) -> bool:
-        """
-        Confirms the job file does NOT exist already.
-        """
-        if self.itr.debug_mode:
-            self.itr.logger.debug(
-                f"{self.logger_msg}: checking for prior SBATCH file... "
-            )
-        result = TestFile(self._jobfile_str, self.itr.logger)
-        result.check_missing()
-        return result.file_exists
+        if self.cl_inputs.debug_mode:
+            self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: adding status handler...")
+        
+        original_line = self._line_list[line_list_index]
+        
+        # Edit Bash function arguments based on inputs to the Python function
+        if message is not None and status_tracker_file is not None:
+            status_handler = f' && capture_status "{message}" {status_tracker_file.file} || capture_status "{message}" {status_tracker_file.file}'
+        elif message is not None and status_tracker_file is None:
+            status_handler = f' && capture_status "{message}" || capture_status "{message}"' 
+        else:
+            status_handler = f' && capture_status || capture_status'
+        
+        if line_list_index != -1:
+            status_handler = status_handler + " &"
+        
+        # Update the line to include the capture_status() bash function as a suffix
+        error_handler = original_line + status_handler
+        
+        # Revise the SBATCH content lines to include the custom status handler function
+        self._line_list[line_list_index] = error_handler
 
     def create_slurm_job(
         self,
-        handler_status_label: Union[str, None],
-        command_list: list,
-        error_index: int = -1,
-        overwrite: bool = False,
-        **slurm_resources: dict,
+        content_list: Union[None, List[str]] = None,
+        handler_status_label: Union[None, str] = None,
+        content_index: int = -1,
+        # overwrite: bool = False,
     ) -> None:
         """
-        Creates the '---Science Goes Here---' contents
-        of a SLURM job using:
+        Combine SLURM SBATCH header lines, with Linux/Bash command(s) for execution after job submission to SLURM queue.
 
-            handler_status_label: a file label used for logging msgs
-
-            command_list: a list of each line of 'science'
+        Args:
+            content_list (List[str]): each item represents a single, executable Linux/Bash command.
+            handler_status_label (Union[str, None], optional): a descriptive label used to ensure SLURM job status reflects command status. Defaults to None.
         """
-        self.handler_status_label = handler_status_label
-        self.command = command_list
-        self.command_builder(self.command)
-        if self.handler_status_label is not None:
-            self.handle_errors(
-                self.handler_status_label,
-                self._tracking_file,
-                error_handler_index=error_index,
-            )
-        if overwrite:
-            self.job_file_exists = False
+        if len(self._header_lines) == 1:
+            self.create_slurm_headers()
+        
+        # Save whatever lines are entered
+        if content_list is not None:
+            # Edit the list to include new line(s)
+            self.update_content_list(new_content=content_list)
         else:
-            self.job_file_exists = self.check_sbatch_file()
-
-        if self.job_file_exists is False:
-            if len(self._header_lines) == 1:
-                self.slurm_headers(**slurm_resources)
+            # Create a duplicate list
+            # NOTE: required to revise with status handling
+            self.update_content_list(new_content=self.command_list)
+            
+        # Force status handler to expect a descriptive message about the subprocess where success is mandatory
+        if handler_status_label is not None:
+            self.handle_subprocess_status(
+                message=handler_status_label,
+                # status_tracking_file=self._tracking_file,
+                line_list_index=content_index,
+            )
+        
+        # Combine the header lines with the content lines (created with a Science() object)
+        if (self.job_file.file_exists and self.cl_inputs.overwrite) or self.job_file.file_exists is False:
             self.all_lines = self._header_lines + self._line_list
             self._num_lines = len(self._line_list)
-        elif self.job_file_exists is True:
-            self._num_lines = None
+        elif self.job_file_exists and self.cl_inputs.overwrite is False:
+            self._num_lines = None       
 
     def display_job(self) -> None:
         """
         Prints the SLURM job file contents to the screen.
         """
         if self._num_lines is not None:
-            self.itr.logger.info(
-                f"{self.logger_msg}: file contents for '{self._jobfile.name}'\n-------------------------------------"
+            self.cl_inputs.logger.info(
+                f"{self.cl_inputs.logger_msg}: file contents for '{self.job_file.path}'\n-------------------------------------"
             )
             print(*self.all_lines, sep="\n")
             print("------------------------------------")
@@ -216,149 +255,144 @@ class SBATCH:
         Writes the SLURM job file contents to a text file.
         """
         if self._num_lines is not None:
-            if self.itr.debug_mode:
-                self.itr.logger.debug(
-                    f"{self.logger_msg}: job file [{self._jobfile.name}] has [{self._num_lines}] lines of science"
+            if self.cl_inputs.debug_mode:
+                self.cl_inputs.logger.debug(
+                    f"{self.cl_inputs.logger_msg}: job file [{self._job_name}] has [{self._num_lines}] lines of content."
                 )
-            with open(self._jobfile_str, mode="w") as file:
-                file.writelines(f"{line}\n" for line in self.all_lines)
-            self.itr.logger.info(
-                f"{self.logger_msg}: new job file created | '{self._jobfile.name}'"
-            )
+            
+            # Save to a new file
+            self.job_file.write_list(line_list=self.all_lines)
+            
+            # Confirm a file was created 
+            self.job_file.check_status(should_file_exist=True)
 
-
-class SubmitSBATCH:
+@dataclass
+class SubmitSBATCH():
     """
     Create a custom SubmitSBATCH object, which submits an SBATCH file to the SLURM queue.
-
-    Examples:
-        slurm_job = SubmitSBATCH('this-is-a-slurm_job.sh', 'hello there', 'my name is jenna', 'cats are awesome')
-
-        kwargs = {"partition" : "BioCompute,hpc5,hpc6", "nodes" : 1, "ntasks" : 40, "mem" : "20G", "CPUmem" : 9099, "time" : "2:00:00", "account" : "animalsci", "email" : "jakth2@mail.missouri.edu"}
-
-        headers i slurm_job.slurm_headers(**kwargs)
-
-        slurm_job.displayjob(**kwargs)
     """
+    job_file: "File"
+    
+    # internal, immutable parameters
+    # NOTE: dataclass inheritance means defaults are REQUIRED 
+    
+    _dependency_command_list: List[str] = field(default_factory=list, init=False, repr=False)
+    _job_id: Union[None, str] = field(default=None, init=False, repr=False)
+    _any_prior_job: Union[None, str, List[str]] = field(default=None, init=False, repr=False)
+    _status: Union[None, int] = field(default=None, init=False, repr=False)
+    _submission_cmd: Union[None, List[str]] = field(default=None, init=False, repr=False) 
+    
+    def __post_init__(self) -> None:
+        # Set new internal, immutable parameters with default values
+        self._job_num_pattern: "compile" = compile(r"\d+")
 
-    def __init__(
+    def build_submission_command(
         self,
-        sbatch_dir: Path,
-        job_file: str,
-        label: str,
-        logger: Logger,
-        logger_msg: str,
-    ) -> None:
-        self.job_file = sbatch_dir / job_file
-        self.job_label = label
-        self.jobnum_pattern = compile(r"\d+")
-        self.logger = logger
-        self.logger_msg = logger_msg
-        self.job_number: str
-        self.slurm_dependency: list
-        self.cmd: list
-        self.prior_job: Union[None, str, list]
-        self.status: int
-
-    def build_command(
-        self,
-        prior_job_number: Union[None, str, list] = None,
+        prior_jobs: Union[None, List[str], str] = None,
         allow_dep_failure: bool = False,
     ) -> None:
         """
         Creates a 'sbatch <job_file>' subprocess command, depending on if there are job dependencies or not.
         """
-        if prior_job_number is None:
-            self.cmd = ["sbatch", str(self.job_file)]
+        if prior_jobs is None:
+            self._submission_cmd = ["sbatch", self.job_file._test_file.file]
         else:
-            self.prior_job = prior_job_number
-            if isinstance(self.prior_job, str):
+            self._any_prior_job = prior_jobs
+            if isinstance(self._any_prior_job, str):
                 if allow_dep_failure:
                     self.slurm_dependency = [
-                        f"--dependency=afterany:{self.prior_job}",
+                        f"--dependency=afterany:{self._any_prior_job}",
                         "--kill-on-invalid-dep=yes",
                     ]
                 else:
                     self.slurm_dependency = [
-                        f"--dependency=afterok:{self.prior_job}",
+                        f"--dependency=afterok:{self._any_prior_job}",
                         "--kill-on-invalid-dep=yes",
                     ]
-                self.cmd = (
-                    ["sbatch"] + self.slurm_dependency + [f"{str(self.job_file)}"]
+                self._submission_cmd = (
+                    ["sbatch"] + self.slurm_dependency + [self.job_file._test_file.file]
                 )
-            elif isinstance(self.prior_job, list):
+            elif isinstance(self._any_prior_job, list):
                 no_priors = check_if_all_same(self.prior_job, None)
                 if no_priors:
-                    self.cmd = ["sbatch", str(self.job_file)]
+                    self._submission_cmd = ["sbatch", str(self.job_file)]
                 else:
                     self.slurm_dependency = collect_job_nums(
                         self.prior_job, allow_dep_failure=allow_dep_failure
                     )
-                    self.cmd = (
-                        ["sbatch"] + self.slurm_dependency + [f"{str(self.job_file)}"]
+                    self._submission_cmd = (
+                        ["sbatch"] + self.slurm_dependency + [self.job_file.file]
                     )
 
     def display_command(
         self,
         current_job: int = 1,
         total_jobs: int = 1,
-        display_mode=False,
-        debug_mode=False,
     ) -> None:
         """
-        Prints the sbatch command used to submit a job.
+        Prints the 'sbatch <job_file>' command used to submit to a SLURM queue.
         """
-        if display_mode:
-            self.logger.info(f"{self.logger_msg}: command used | {' '.join(self.cmd)}")
-            self.logger.info(
-                f"{self.logger_msg}: pretending to submit SLURM job {current_job}-of-{total_jobs}"
+        if self.job_file.cl_inputs.dry_run_mode:
+            self.job_file.cl_inputs.logger.info(
+                f"{self.job_file.logger_msg}: pretending to submit SLURM job {current_job}-of-{total_jobs} with command:\n{' '.join(self._submission_cmd)}"
             )
-        elif debug_mode:
-            self.logger.debug(
-                f"{self.logger_msg}: submitting SLURM job with command: {' '.join(self.cmd)}"
+
+        elif self.job_file.cl_inputs.debug_mode:
+            self.job_file.cl_inputs.logger.debug(
+                f"{self.job_file.logger_msg}: submitting SLURM job {current_job}-of-{total_jobs} with command:\n{' '.join(self._submission_cmd)}"
             )
 
     def get_status(
-        self, current_job: int = 1, total_jobs: int = 1, debug_mode=False
+        self,
+        current_job: int = 1,
+        total_jobs: int = 1,
     ) -> None:
         """
         Determines if a SLURM job was submitted correctly.
         """
-        # Sleep a bit, for <1 second before
-        # submission to SLURM queue
+        # Sleep for <1 second before submission to SLURM queue
+        # Give any previous SBATCH job submissions time to finish before submitting another
         sleep(random())
-        # wait for previous process to close
-        # before opening another
-        if debug_mode:
-            self.logger.debug(f"{self.logger_msg}: submitting a SLURM job to SLURM... ")
+        
+        self.display_command()
+        
+        # Do not actually run the job on dry_run_mode
+        if self.job_file.cl_inputs.dry_run_mode:
+            self._job_id = generate_job_id()
+            return
 
         try:
-            _result = run(self.cmd, capture_output=True, text=True, check=True)
+            _result = run(self._submission_cmd, capture_output=True, text=True, check=True)
             self.status = _result.returncode
+        
         except CalledProcessError as err:
             error_lines = err.stderr.strip().split("\n")
             for l in error_lines:
-                self.logger.error(f"{self.logger_msg}: {l}")
-            self.logger.error(
-                f"{self.logger_msg}: unable to submit SLURM Job | '{self.job_file.name}'\nExiting... "
+                self.job_file.cl_inputs.logger.error(f"{self.job_file.logger_msg}: {l}")
+            self.job_file.cl_inputs.logger.error(
+                f"{self.job_file.logger_msg}: unable to submit SLURM job {current_job}-of-{total_jobs} | '{self.job_file.file_name}'\nExiting... "
             )
             exit(err.returncode)
 
         if self.status == 0:
-            self.logger.info(
-                f"{self.logger_msg}: submitted SLURM job {current_job}-of-{total_jobs}"
+            self.job_file.cl_inputs.logger.info(
+                f"{self.job_file.logger_msg}: submitted SLURM job {current_job}-of-{total_jobs}"
             )
-            match = self.jobnum_pattern.search(_result.stdout)
+            match = self.job_num_pattern.search(_result.stdout)
             if match:
-                self.job_number = str(match.group())
-                if debug_mode:
-                    self.logger.debug(
-                        f"{self.logger_msg}: SLURM Job Number |  {self.job_number}"
+                self._job_id = str(match.group())
+                if self.job_file.cl_inputs.debug_mode:
+                    self.job_file.cl_inputs.logger.debug(
+                        f"{self.job_file.logger_msg}: SLURM job id |  {self._job_id}"
                     )
             else:
-                self.logger.warning(
-                    f"{self.logger_msg}: unable to detect SLURM Job Number during submission | '{self.job_file.name}'",
+                self.job_file.cl_inputs.logger.warning(
+                    f"{self.job_file.logger_msg}: unable to detect a SLURM job id from queue submission | '{self.job_file.file_name}'... SKIPPING AHEAD",
                 )
-                self.logger.info(
-                    f"{self.logger_msg}: skipping SLURM job | '{self.job_file}'"
-                )
+
+    def send_to_queue(self) -> None:
+        """
+        Send a SBATCH file to the SLURM job queue
+        """
+        self.build_submission_command()
+        self.get_status()   
