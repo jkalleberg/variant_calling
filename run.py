@@ -153,6 +153,9 @@ def __init__() -> None:
             run.args.modules
         ).is_file(), f"unable to find the modules file | '{run.args.modules}'"
         
+        # Resolve any relative path entered for modules.sh
+        _resolved_module_path = Path(run.args.modules).resolve()
+        
         # Make the flag [REQUIRED] 
         assert (
             run.args.resource_config
@@ -215,7 +218,6 @@ def __init__() -> None:
     # Initialize all command line inputs
     run.process_args()
     
-    # ENTER CUSTOM SUB-MODULES HERE!
     # Handle custom inputs needed for the generic variant calling pipeline
     _cl_inputs = InputManager(
         args=run.args,
@@ -224,11 +226,15 @@ def __init__() -> None:
     )
     _cl_inputs.update_mode()
     _cl_inputs.create_logging_msg()
+    
+    # CLUSTER-SPECIFIC SOFTWARE MODULES / DEPENDENCIES:
+    # Update command-line args to be absolute path as a Path() obj
+    run.args.modules = Path(_resolved_module_path)
      
     # REFERENCE: Confirm a .fai index file exists prior to running PICARD CreateSequenceDict()
     for file in _reference_files:
         if "fai" in file.suffix.lower():
-            # Update the command-line args to point to the FASTA file as a Path()
+            # Update the command-line args to point to the FASTA file as a Path() object
             run.args.ref_file  = Path(file).parent / Path(file).stem
         
     if isinstance(run.args.ref_file, Path) and run.args.ref_file.is_file():
