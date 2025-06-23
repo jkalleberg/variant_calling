@@ -90,7 +90,7 @@ class Science:
             print("SET THE FORMAT FOR CUE'S CONTAINER")
             breakpoint()
 
-        self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: using the {type} container | '{self._container}'")
+        self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: using the {type} container | '{self._container}'")
     
     def create_bindings(self) -> None:
         """
@@ -139,8 +139,7 @@ class Science:
                 self._nproc  = cpu_count()
 
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-            self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: number of {_label} processing units | '{self._nproc}'") 
-        
+            self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: number of {_label} processing units | '{self._nproc}'")  
 
     def build_deepvariant_cmd(self,
                               sequence_type: str = "WGS",
