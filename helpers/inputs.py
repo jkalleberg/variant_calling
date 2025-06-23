@@ -38,19 +38,24 @@ class InputManager:
         else:
             self.logger_msg = f"[{self.phase}]"
 
-    def create_a_dir(self, dir_name: Path) -> None:
+    def create_a_dir(self, dir_name: Path, updated_log_msg: Union[None, str] = None) -> None:
         """
         Create a new directory.
         """
+        if updated_log_msg is not None:
+            _log_msg = updated_log_msg
+        else:
+            _log_msg = self.logger_msg
+        
         if not dir_name.exists() or not dir_name.is_dir():
             if self.dry_run_mode:
                 self.logger.info(
-                    f"{self.logger_msg}: pretending to create a new directory | '{str(dir_name)}'"
+                    f"{_log_msg}: pretending to create a new directory | '{str(dir_name)}'"
                 )
             else:
                 if self.debug_mode:
                     self.logger.debug(
-                        f"{self.logger_msg}: creating a new directory | '{str(dir_name)}'"
+                        f"{_log_msg}: creating a new directory | '{str(dir_name)}'"
                     )
                 dir_name.mkdir(exist_ok=True, parents=True)
     
@@ -75,6 +80,8 @@ class InputManager:
         new_val: Union[str, int, float],
         valid_keys: Union[List[str], None] = None,
         replace_value: bool = False,
+        updated_log_msg: Union[None, str] = None,
+        verbose: bool = False,
     ) -> None:
         """
         Add a key=value pair to a dictionary object.
@@ -94,28 +101,38 @@ class InputManager:
         replace_value : bool, optional
             if True, overwrite the value of an existing key, by default False
         """
+        if updated_log_msg is not None:
+            _log_msg = updated_log_msg
+        else:
+            _log_msg = self.logger_msg
+            
         if valid_keys is not None:
             if new_key not in valid_keys:
-                self.logger.error(f"{self.logger_msg}: invalid metadata key | '{new_key}'")
+                self.logger.error(f"{_log_msg}: invalid metadata key | '{new_key}'")
                 valid_key_string: str = ", ".join(valid_keys)
                 self.logger.error(
-                    f"{self.logger_msg}: use one of the following valid keys | '{valid_key_string}'\nExiting..."
+                    f"{_log_msg}: use one of the following valid keys | '{valid_key_string}'\nExiting..."
                 )
                 exit(1)
 
         if new_key not in update_dict.keys():
             update_dict[new_key] = new_val
             if self.debug_mode:
-                self.logger.debug(f"{self.logger_msg}: dictionary updated with | '{new_key}={new_val}'")
+                self.logger.debug(f"{_log_msg}: dictionary updated with | '{new_key}={new_val}'")
+        
         elif new_key in update_dict.keys() and replace_value:
             old_value = update_dict[new_key]
             update_dict[new_key] = new_val
-            if self.debug_mode:
+            if self.debug_mode and verbose:
                 self.logger.debug(
-                    f"{self.logger_msg}: previous value '{new_key}={old_value}' | new value '{new_key}={new_val}'"
+                    f"{_log_msg}: previous value '{new_key}={old_value}' | new value '{new_key}={new_val}'"
+                )
+            else:
+                self.logger.debug(
+                    f"{_log_msg}: previous value replaced with | '{new_key}={new_val}'"
                 )
         else:
             self.logger.warning(
-                f"{self.logger_msg}: unable to overwrite value for an existing key | '{new_key}'"
+                f"{_log_msg}: unable to overwrite value for an existing key | '{new_key}'"
             )
 
