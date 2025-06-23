@@ -14,11 +14,12 @@ import re
 if TYPE_CHECKING:
     from genome import Genome
 
+from helpers.files import File
 
 @dataclass
 class Science:
     """
-    Creates the command line 'science' to be run within an SBATCH job.
+    Creates the command line 'science' to be run.
     """
 
     # required parameters
@@ -41,8 +42,14 @@ class Science:
         else:
             self._job_name = f"{prefix}.{self.genome._sample_id}"
 
-        self._jobfile = self.genome._job_dir / f"{self._job_name}.sbatch"
-        self._jobfile_str = str(self._jobfile)
+        self._job_file = File(
+            path_to_file = self.genome._job_dir / f"{self._job_name}.sbatch",
+            cl_inputs=self.genome.pipeline_inputs.cl_inputs,
+        )
+        if self.genome.pipeline_inputs.cl_inputs.overwrite:
+            self._job_file.check_status(should_file_exist=True)
+        else:
+            self._job_file.check_status()
 
     # Uncomment to use Cue
     # def build_cue_cmd(self) -> None:
