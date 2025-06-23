@@ -151,13 +151,13 @@ class File:
 
             # Confirm the expected number of lines was written
             with open(
-                f"{self.path}/{self.file}", mode="r", encoding="UTF-8"
+                f"{self.path}", mode="r", encoding="UTF-8"
             ) as filehandle:
                 self.file_lines = filehandle.readlines()
 
             assert len(line_list) == len(
                 self.file_lines
-            ), f"expected {len(line_list)} lines in {self.file}, but there were {len(self.file_lines)} found"
+            ), f"expected {len(line_list)} lines in {self.file_name}, but there were {len(self.file_lines)} found"
 
     def write_list_of_dicts(
         self, line_list: List[Dict[str, str]], delim: Union[str, None] = None
@@ -203,7 +203,7 @@ class File:
         else:
             if self.path.exists():
                 if self.cl_inputs.debug_mode:
-                    debug_msg = f"appending [{self.file}] with a new row"
+                    debug_msg = f"appending [{self.file_name}] with a new row"
                     if self.cl_inputs.logger_msg is None:
                         self.cl_inputs.logger.debug(debug_msg)
                     else:
@@ -215,7 +215,7 @@ class File:
                     self.file_dict.update(data_dict)
             else:
                 if self.cl_inputs.debug_mode:
-                    debug_msg = f"initializing | '{self.file}'"
+                    debug_msg = f"initializing | '{self.file_name}'"
                     if self.cl_inputs.logger_msg is None:
                         self.cl_inputs.logger.debug(debug_msg)
                     else:
@@ -263,7 +263,7 @@ class File:
                         write_file.writerow([key, value])
 
             if self.path.is_file():
-                logging_msg = f"created intermediate CSV file | '{self.file}'"
+                logging_msg = f"created intermediate CSV file | '{self.file_name}'"
                 if self.cl_inputs.logger_msg is None:
                     self.cl_inputs.logger.info(logging_msg)
                 else:
@@ -319,22 +319,31 @@ class File:
         else:
             _msg = self.cl_inputs.logger_msg
 
+        _use_warning = False
         if self.cl_inputs.dry_run_mode:
             if self._test_file.file_exists:
                 _info = "pretending to re-write the existing"
             else:
                 _info = "pretending to write a new"
         else:
-            if self._test_file.file_exists:
-                _info = "re-writing the existing"
+            if self._test_file.file_exists and not self.cl_inputs.overwrite:
+                _info = "--overwrite=False, unable to re-write an existing"
+                _use_warning = True
+            elif self._test_file.file_exists and self.cl_inputs.overwrite:
+                _info = "--overwrite=True, re-writing the existing"
             else:
                 _info = "writing a new"
         
-        self.cl_inputs.logger.info(
+        if _use_warning:
+            self.cl_inputs.logger.warning(
                 f"{_msg}: {_info} pickle file | '{self._test_file.file}'"
             )
+        else:
+            self.cl_inputs.logger.info(
+                    f"{_msg}: {_info} pickle file | '{self._test_file.file}'"
+                )
         
-        if self.cl_inputs.dry_run_mode:
+        if self.cl_inputs.dry_run_mode or (self._test_file.file_exists and not self.cl_inputs.overwrite):
             return
         else:
             with open(str(self._test_file.path), "wb") as outp:
