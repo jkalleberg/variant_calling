@@ -7,6 +7,11 @@
 # Ignore conda envs
 miniconda_envs/
 
+# Ignore Apptainer containers
+/APPTAINER_CACHE/
+/APPTAINER_TMPDIR/
+*.sif
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
