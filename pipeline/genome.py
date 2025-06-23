@@ -469,10 +469,8 @@ class Genome:
             if self._new_lines:
                 self._science.update_command(cmd_list=self._new_lines)
         else:
-            print("JOB FILE ALREADY EXISTS!")
-            print("JOB FILE PATH:", self._science._job_file.path)
-            print("JOB FILE EXISTS?", self._science._job_file.file_exists)
-            breakpoint()
+            self.pipeline_inputs.cl_inputs.logger.warning(
+                f"{self._log_msg}: --overwrite=False, skipping variant caller command building | '{self._science._job_file.path}'")
     
     def init_job(self) -> None:
         """
@@ -485,10 +483,19 @@ class Genome:
             log_dir=self._log_dir,
             )
 
-        self._slurm_job.create_slurm_job()
+        # Uncomment to by-pass defining variant calling as mandatory
+        # self._slurm_job.create_slurm_job()
         
-        # Uncomment if adding Postprocess VCF commands
-        # self._slurm_job.create_slurm_job(handler_status_label=f"variant_calling:{self._model_type}")
+        self._slurm_job.create_slurm_job(handler_status_label=f"variant_calling:{self._model_type}")
+        
+        # Actually generate the SBATCH file, or pretend to
+        if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
+            self._slurm_job.display_job()
+        elif self.pipeline_inputs.cl_inputs.debug_mode and not self.pipeline_inputs.cl_inputs.dry_run_mode:
+            self._slurm_job.display_job()
+            self._slurm_job.write_job()
+        else:
+            self._slurm_job.write_job()        
         
     def submit_job(
         self,

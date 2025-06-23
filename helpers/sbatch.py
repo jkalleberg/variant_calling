@@ -211,33 +211,39 @@ class SBATCH:
         Args:
             content_list (List[str]): each item represents a single, executable Linux/Bash command.
             handler_status_label (Union[str, None], optional): a descriptive label used to ensure SLURM job status reflects command status. Defaults to None.
-        """
-        if len(self._header_lines) == 1:
-            self.create_slurm_headers()
-        
+        """       
+        # Determine if any SBATCH content lines were created
         # Save whatever lines are entered
         if content_list is not None:
             # Edit the list to include new line(s)
-            self.update_content_list(new_content=content_list)
+            _content_to_add = content_list
         else:
             # Create a duplicate list
             # NOTE: required to revise with status handling
-            self.update_content_list(new_content=self.command_list)
+            _content_to_add = self.command_list
+        
+        # Prevent creation/submission of an empty SBATCH
+        if _content_to_add:
+        
+            self.update_content_list(new_content=_content_to_add)
             
-        # Force status handler to expect a descriptive message about the subprocess where success is mandatory
-        if handler_status_label is not None:
-            self.handle_subprocess_status(
-                message=handler_status_label,
-                # status_tracking_file=self._tracking_file,
-                line_list_index=content_index,
-            )
+            if len(self._header_lines) == 1:
+                self.create_slurm_headers()
+                
+            # Force status handler to expect a descriptive message about the subprocess where success is mandatory
+            if handler_status_label is not None:
+                self.handle_subprocess_status(
+                    message=handler_status_label,
+                    # status_tracking_file=self._tracking_file,
+                    line_list_index=content_index,
+                )
         
         # Combine the header lines with the content lines (created with a Science() object)
         if (self.job_file.file_exists and self.cl_inputs.overwrite) or self.job_file.file_exists is False:
             self.all_lines = self._header_lines + self._line_list
             self._num_lines = len(self._line_list)
-        elif self.job_file_exists and self.cl_inputs.overwrite is False:
-            self._num_lines = None       
+        elif self.job_file.file_exists and self.cl_inputs.overwrite is False:
+            self._num_lines = None
 
     def display_job(self) -> None:
         """
@@ -260,11 +266,24 @@ class SBATCH:
                     f"{self.cl_inputs.logger_msg}: job file [{self._job_name}] has [{self._num_lines}] lines of content."
                 )
             
-            # Save to a new file
-            self.job_file.write_list(line_list=self.all_lines)
-            
-            # Confirm a file was created 
-            self.job_file.check_status(should_file_exist=True)
+            # Job file will only be written if SBATCH lines were created
+            if self.all_lines:
+                # Save to a new file
+                self.job_file.write_list(
+                    line_list=self.all_lines,
+                    # append_lines=True, # uncomment to extend the file rather than write over it
+                    )
+                
+                # Confirm a file was created 
+                self.job_file.check_status(should_file_exist=True)
+        else:
+            if self.cl_inputs.overwrite:
+                _msg = "--overwrite=True,"
+            else:
+                _msg = "--overwrite=False," 
+            self.cl_inputs.logger.warning(
+                f"{self.cl_inputs.logger_msg}: {_msg} no new file contents for '{self.job_file.path}'"
+            )
 
 @dataclass
 class SubmitSBATCH():
@@ -378,7 +397,7 @@ class SubmitSBATCH():
             self.job_file.cl_inputs.logger.info(
                 f"{self.job_file.logger_msg}: submitted SLURM job {current_job}-of-{total_jobs}"
             )
-            match = self.job_num_pattern.search(_result.stdout)
+            match = self._job_num_pattern.search(_result.stdout)
             if match:
                 self._job_id = str(match.group())
                 if self.job_file.cl_inputs.debug_mode:

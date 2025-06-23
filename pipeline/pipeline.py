@@ -258,19 +258,23 @@ class Pipeline:
         Args:
             prior_jobs (Union[List[Union[str, None]], None], optional): _description_. Defaults to None.
         """
+        
+        _default_output = genome.pipeline_inputs.variant_callers[genome._model_type]["default_output"]
         if self.pipeline_inputs.cl_inputs.overwrite:
             self.pipeline_inputs.cl_inputs.logger.info(
-                    f"{self.pipeline_inputs.cl_inputs.logger_msg} --overwrite=True; re-writing the existing output file | '{self.genome._default_vcf.file}'"
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg} --overwrite=True; re-writing the existing output file | '{_default_output.file_name}'"
             )
         
-        genome.init_science()
-        genome.init_job() 
+        genome.init_science()        
+        genome.init_job()
+        print("HALT!")
+        breakpoint()
         self._result = genome.submit_job()
         
             # Uncomment for Cue
             # # if missing raw CUE results completely...
             # # Only call svs when creating the default VCF
-            # if not self.genome._default_vcf._file_exists:
+            # if not _default_output._file_exists:
             #     if not self.genome.iter.inputs.args.per_chr or (
             #         self.genome.iter.inputs.args.per_chr and not self.genome._final_genome
             #     ):
@@ -280,7 +284,7 @@ class Pipeline:
             #     else:
             #         self.genome._run_cue = False
             # elif (
-            #     self.genome._default_vcf._file_exists
+            #     _default_output._file_exists
             #     and self.pipeline_inputs.cl_inputs.overwrite
             # ):
             #     self.genome.call_svs()

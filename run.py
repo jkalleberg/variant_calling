@@ -122,9 +122,9 @@ def __init__() -> None:
             "--allele-freq", 
             "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
             
-            "--dry-run",
-            "--debug",
-            # "--overwrite",
+            # "--dry-run",
+            # "--debug",
+            "--overwrite",
             
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
             # "--resources",
@@ -306,7 +306,7 @@ def __init__() -> None:
     _pipeline_inputs.find_ref_dict()
     _pipeline_inputs.transform_dictionary()
     
-    # Create a 'default regions BED file' to exclude the unmapped contigs and MT genome
+    # Create a 'default regions BED file' to exclude the unmapped contigs
     _pipeline_inputs.default_regions_BED()
     
     # Determine how many rows were provided as a single input
