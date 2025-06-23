@@ -267,9 +267,9 @@ class Pipeline:
         
         genome.init_science()        
         genome.init_job()
+        self._result = genome.submit_job()
         print("HALT!")
         breakpoint()
-        self._result = genome.submit_job()
         
             # Uncomment for Cue
             # # if missing raw CUE results completely...

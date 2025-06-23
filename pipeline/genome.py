@@ -444,8 +444,14 @@ class Genome:
         # self._science = Science(genome=self, chr_name=self._chrom)
         
         self._science.build_job_name()
+        
+        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
 
-        if self._science._job_file.file_exists is False or self.pipeline_inputs.cl_inputs.overwrite: 
+        if (
+            _default_output.file_exists is False # expect output is missing
+            or self._science._job_file.file_exists is False # missing an existing SBATCH
+            or self.pipeline_inputs.cl_inputs.overwrite # intending to re-write the SBATCH file
+            ):
         
             if "deepvariant" in self._model_type.lower():
                 self._science.build_deepvariant_cmd()
@@ -482,7 +488,7 @@ class Genome:
             job_file=self._science._job_file,
             log_dir=self._log_dir,
             )
-
+        
         # Uncomment to by-pass defining variant calling as mandatory
         # self._slurm_job.create_slurm_job()
         
@@ -495,7 +501,7 @@ class Genome:
             self._slurm_job.display_job()
             self._slurm_job.write_job()
         else:
-            self._slurm_job.write_job()        
+            self._slurm_job.write_job()    
         
     def submit_job(
         self,
@@ -504,21 +510,44 @@ class Genome:
         """
         Pass a SBATCH job to the SLURM queue.
         """
-        _submit = SubmitSBATCH(
-            job_file=self._slurm_job.job_file,
-            )
         
-        if prior_jobs is not None:
-            _submit.build_submission_command(
-                prior_jobs=prior_jobs,
-                allow_dep_failure=True,
-                # allow_dep_failure=False, # Uncomment to trigger successive Bash commands within a single SBATCh file
+        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        
+        if not self.pipeline_inputs.cl_inputs.dry_run_mode:
+            # confirm an SBATCH file actually exists
+            self._science._job_file.check_status()
+        
+        if (
+            _default_output.file_exists is False
+            and self._science._job_file.file_exists
+        ) or (
+            _default_output.file_exists 
+            and self.pipeline_inputs.cl_inputs.overwrite  
+        ):
+        
+            _submit = SubmitSBATCH(
+                job_file=self._slurm_job.job_file,
                 )
-            _submit.get_status()
+            
+            if prior_jobs is not None:
+                _submit.build_submission_command(
+                    prior_jobs=prior_jobs,
+                    allow_dep_failure=True,
+                    # allow_dep_failure=False, # Uncomment to trigger successive Bash commands within a single SBATCh file
+                    )
+                _submit.get_status()
+            else:
+                _submit.send_to_queue()
+            
+            return _submit._job_id
         else:
-            _submit.send_to_queue()
+            print("NO SLURM JOB WILL BE SUBMITTED")
+            print("OUTPUT FILE EXISTS:", _default_output.file_exists)
+            print("JOB FILE EXISTS:", self._science._job_file.file_exists)
         
-        return _submit._job_id
+            print("ANY LINES CREATED?", self._science._n_lines is not None)
+            print("OVERWRITE?", self.pipeline_inputs.cl_inputs.overwrite)
+            breakpoint()
      
     # def update_logging(self) -> None:
     #     if self._reads_path is None:

@@ -110,6 +110,7 @@ def __init__() -> None:
             "-O",
             "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
+            
             "-I",
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK 
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK 
@@ -122,9 +123,9 @@ def __init__() -> None:
             "--allele-freq", 
             "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
             
-            # "--dry-run",
+            "--dry-run",
             # "--debug",
-            "--overwrite",
+            # "--overwrite",
             
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
             # "--resources",

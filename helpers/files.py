@@ -322,7 +322,10 @@ class File:
         _use_warning = False
         if self.cl_inputs.dry_run_mode:
             if self._test_file.file_exists:
-                _info = "pretending to re-write the existing"
+                if self.cl_inputs.overwrite:
+                    _info = "--overwrite=True, pretending to re-write the existing"
+                else:
+                    _info = "--overwrite=False, pretending to re-write the existing"
             else:
                 _info = "pretending to write a new"
         else:
