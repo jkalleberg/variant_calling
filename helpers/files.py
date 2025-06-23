@@ -123,7 +123,7 @@ class File:
             )
         self.file_exists = self._test_file.file_exists
 
-    def write_list(self, line_list: List[str]) -> None:
+    def write_list(self, line_list: List[str], append_lines: bool = False) -> None:
         """
         Take an iterable list of lines and write them to a text file.
         """
@@ -142,8 +142,12 @@ class File:
                 print(line)
             print("---------------------------------------------")
         else:
-            with open(f"{self.path}", mode="a", encoding="UTF-8") as file:
-                file.writelines(f"{line}\n" for line in line_list)
+            if append_lines:
+                with open(f"{self.path}", mode="a", encoding="UTF-8") as file:
+                    file.writelines(f"{line}\n" for line in line_list)
+            else:
+                with open(f"{self.path}", mode="w", encoding="UTF-8") as file:
+                    file.writelines(f"{line}\n" for line in line_list)
 
             # Confirm the expected number of lines was written
             with open(
