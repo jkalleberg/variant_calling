@@ -43,8 +43,6 @@ class PipelineInputManager:
     _benchmarking_file: Union[None, "File"] = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.module_path = Path(self.cl_inputs.args.modules)
-        # self.model_prefix = Path(self.cl_inputs.args.model_prefix)
         self.track_resources = self.cl_inputs.args.benchmark
    
     def find_ref_dict(self) -> None:
