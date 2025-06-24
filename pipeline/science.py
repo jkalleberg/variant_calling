@@ -100,7 +100,7 @@ class Science:
         """
         Create the path bindings for Apptainer/Singularity
         """
-        bindings = self._base_binding + [f"{getcwd()}/:/run_dir/"]
+        bindings = [self._base_binding, f"{getcwd()}/:/run_dir/"]
         
         # Only select the variable PATHs, ignoring the file name(s) for now        
         _variable_paths = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "path" in key.lower()}
