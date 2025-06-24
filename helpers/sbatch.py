@@ -103,7 +103,10 @@ class SBATCH:
             if key == "email":
                 if value != "":
                     self._header_lines.append(f"#SBATCH --mail-user={value}")
-                    self._header_lines.append("#SBATCH --mail-type=FAIL")
+                    if self.cl_inputs.debug_mode:
+                        self._header_lines.append("#SBATCH --mail-type=FAIL,END")
+                    else: 
+                        self._header_lines.append("#SBATCH --mail-type=FAIL")
             elif key == "CPUmem":
                 self._header_lines.append("#SBATCH --ntasks-per-core=1")
                 self._header_lines.append(f"#SBATCH --mem-per-cpu={str(value)}")
