@@ -2,14 +2,15 @@
 """
 description: after run.py, ensure large temp files are wiped after successful variant calling with the custom DeepVariant checkpoint.
 
-usage: python3 archive                                              \
-        -O ../CATTLE_TEST/                                          \
-        -I ./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv   \
-        --reference ../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y        \
-        --allele-freq ../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz  \
-        --dry-run                                                   \
+usage: python3 archive.py                 \
+        -I ../CATTLE_TEST/1051/1051.pkl   \
+        --dry-run                         \
                     
 """
+
+# from os import path
+# from pathlib import Path
+# from typing import TYPE_CHECKING
 
 from pathlib import Path
 from sys import path, exit
@@ -19,35 +20,77 @@ module_path = str(abs_path.parent.parent)
 path.append(module_path)
 
 from helpers.module_builder import CustomModule
-
-# from os import path
-# from pathlib import Path
-# from sys import exit
-# from typing import TYPE_CHECKING
+from helpers.inputs import InputManager
+from helpers.files import File
 
 # if TYPE_CHECKING:
 #     from genome import Genome
-
-# from _args import check_args, collect_args, get_args
 # from clean_results import CleanUp
-# from helpers.files import WriteFile
-# from helpers.inputs import Inputs
-# from helpers.utils import get_logger
-# from helpers.wrapper import Wrapper, timestamp
+
 
 
 def __init__() -> None:
-    archive = CustomModule()
+    archive = CustomModule(output_required=False)
     archive.start_module()
+    
+    # Uncomment to force arg entry at command line
+    # archive.collect_args()
+    
+    # Edit for manually testing command line arguments
+    archive.collect_args(
+        [
+            "-I",
+            "../CATTLE_TEST/1051/1051.pkl",
+            "--dry-run",
+            # "--debug",
+            # "--overwrite",
+        ])
 
-    # input_file = Path(args.genome_pickle)
+    try:
+        # Check generic command-line flags
+        archive.check_args()
 
-    # pickle_file = WriteFile(
-    #     path_to_file=input_file.parent,
-    #     file=input_file.name,
-    #     inputs=inputs,
-    # )
-    # _genome = pickle_file.load_pickle()
+    except AssertionError as error:
+        archive._logger.error(f"{error}.\nExiting... ")
+        exit(1)
+    
+    # Initialize all command line inputs
+    archive.process_args()
+        
+    # Handle  inputs needed
+    _cl_inputs = InputManager(
+        args=archive._args,
+        logger=archive._logger,
+        phase="archive",
+    )
+    _cl_inputs.update_mode()
+    _cl_inputs.create_logging_msg()
+    
+    # INPUT PATH: Determine if a directory name was given as output, when it should be a directory
+    if archive._input_path.stem != archive._input_path.name:
+        # Confirm input is an existing file
+        if archive._input_path.is_file():
+            if _cl_inputs.debug_mode:
+                archive._logger.debug(f"{_cl_inputs.logger_msg}: valid --input; detected an existing file.")
+            _cl_inputs._input_path = archive._input_path
+        else:
+            archive._logger.error(f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {archive._input_path}\nExiting...")
+            exit(1)
+    else:
+        # TO DO: enable providing an input directory (e.g., samples + metadata together)?
+        archive._logger.error(f"invalid --input; expected a file, did you enter a directory? | {archive._input_path}\nExiting...")
+        exit(1)
+
+    # Find the picked data for a specific sample
+    _pickle_file = File(
+        path_to_file=archive._input_path,
+        cl_inputs=_cl_inputs,
+    )
+    _genome = _pickle_file.load_pickle()
+    print("GENOME:", _genome)
+    print("MODEL NAME:", _genome._model_type)
+    print("TEMP DIR:", _genome._variables[_genome._model_type]["temp_path"])
+    breakpoint()
 
     # try:
     #     assert _genome, "unable to re-open the pickled Genome()"
@@ -55,13 +98,10 @@ def __init__() -> None:
 
     #     # update the 'mode' based on current script args
     #     _genome.iter.inputs = inputs
-
     #     clean_files = CleanUp(genome=_genome)
     #     clean_files.remove_lg_intermediates()
-
-    # except AssertionError as e:
-    #     logger.error(f"{inputs.logger_msg} {e}\nExiting...")
-
+    
+    
     archive.end_module()
 
 
