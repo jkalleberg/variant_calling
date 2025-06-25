@@ -123,14 +123,24 @@ class CustomModule:
         With "--dry-run", display a msg.
         Then, check to make sure all required flags are provided.
         """
-
         assert (
             self.args.out_path
         ), "missing [REQUIRED] flag: --output; Please provide a directory or file name for saving results."
 
+        # Resolve potential relative path entered
+        _resolved_out_path = Path(self.args.out_path).resolve()
+        self.args.out_path = _resolved_out_path
+        
         assert (
             self.args.input
-        ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file containing a list of BAM/CRAM files to process."
+        ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file."
+        
+        # Resolve potential relative path entered
+        _resolved_in_path = Path(self.args.input).resolve()
+        
+        # Confirm resolved Path is valid
+        assert (_resolved_in_path.is_file() or _resolved_in_path.is_dir()), f"unable to find the input path | '{_resolved_in_path}'"
+        self.args.input = _resolved_in_path
     
     def get_arg_default(self, arg_name: str = "input") -> str:
         """

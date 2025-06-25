@@ -1,9 +1,14 @@
 #!/usr/bin/python3
 """
-description: template to use for creating custom Python executables.
+description: start here to begin cohort calling with a custom DeepVariant checkpoint.
 
-example: python3 run.py -O /path/to/output/dir -I /path/to/input/file --dryrun --debug --overwrite
-
+usage: python3 run.py                                               \
+        -O ../CATTLE_TEST/                                          \
+        -I ./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv   \
+        --reference ../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y        \
+        --allele-freq ../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz  \
+        --dry-run                                                   \
+                    
 """
 
 from pathlib import Path
@@ -31,7 +36,7 @@ def __init__() -> None:
         "-A",
         "--allele-freq",
         dest="pop_file",
-        help="input file (.vcf.gz);\n[REQUIRED] when using the custom, bovine-trained version of DeepVariant v1.4.0;\nprovides the population allele frequencies to encode as an additional channel during variant calling", 
+        help="input file (.vcf.gz);\n[REQUIRED] when using the custom, bovine-trained DeepVariant (model.ckpt-282383);\nprovides the population allele frequencies to encode as an additional channel during variant calling", 
         type=str,
         metavar="</path/file>", 
     )
@@ -61,7 +66,7 @@ def __init__() -> None:
         "-M",
         "--model-prefix",
         dest="model_prefix",
-        help="[REQUIRED]\nabsolute path with checkpoint prefix only for variant calling model(s)\neither a single path, or provide a comma-separated list of paths for multiple variant callers\n(default: %(default)s)",
+        help="[REQUIRED]\ninput file prefix;\ndefines naming convention for variant calling checkpoint(s) to use for variant calling\nto use multiple variant callers, provide a comma-separated list of checkpoint prefixes\n(default: %(default)s)",
         default="./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_withAF_bovid/model.ckpt-282383",
         type=str,
         metavar="</path/file_prefix_only> or </path/file_prefix_only1>,</path/file_prefix_only2>",
@@ -86,9 +91,9 @@ def __init__() -> None:
     )
     run._parser.add_argument(
         "-R",
-        "--reference",
+        "--reference-prefix",
         dest="ref_file",
-        help="[REQUIRED]\ninput file (.fa/.fasta/.fasta.fai/.dict);\npoints to reference genome file(s) located in the same directory;\nminimum expectations:\n\t(.fa/.fasta with .fai index)\n\tused to create a PICARD reference dictionary file (.dict) and a default regions file (.bed) usings the reference prefix, unless these exist already.", 
+        help="[REQUIRED]\ninput file prefix;\ndefines naming convention for the reference genome to find similar file(s) located in the same directory;\nminimum file expectations:\n\t(.fasta + .fai index)\n\tnaming convention used to create a reference dictionary file with PICARD (.dict) and a default regions file (.bed), if these are missing.", 
         type=str,
         metavar="</path/file_prefix_only>", 
     )
@@ -108,22 +113,22 @@ def __init__() -> None:
     run.collect_args(
         [
             "-O",
-            "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/",
+            "../CATTLE_TEST/",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
             
             "-I",
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK 
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK 
-            "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
+            "./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
             
             "--reference",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
-            "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
+            "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
             ### NO --allele-freq with default ckpt will break!
             "--allele-freq", 
-            "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
+            "../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
             
-            # "--dry-run",
+            "--dry-run",
             # "--debug",
             # "--overwrite",
             
@@ -144,46 +149,47 @@ def __init__() -> None:
     
     # Check custom command line flags 
     try:
-        # Make the flag [REQUIRED]
+        # Make the --modules flag [REQUIRED]
         assert (
             run.args.modules
-        ), f"missing [REQUIRED] flag: --modules; Please provide the absolute path to an existing modules BASH file containing HPC-cluster-specific software dependencies."
-             
-        # Confirm path provide is valid
-        assert Path(
-            run.args.modules
-        ).is_file(), f"unable to find the modules file | '{run.args.modules}'"
+        ), f"missing [REQUIRED] flag: --modules; Please provide the path to an existing modules BASH file containing HPC-cluster-specific software dependencies."
         
         # Resolve any relative path entered for modules.sh
         _resolved_module_path = Path(run.args.modules).resolve()
         
-        # Make the flag [REQUIRED] 
+        # Confirm path provide is valid
+        assert _resolved_module_path.is_file(), f"unable to find the modules file | '{_resolved_module_path}'"
+        run.args.modules = _resolved_module_path
+        
+        # Make the --resources flag [REQUIRED] 
         assert (
             run.args.resource_config
-        ), "missing [REQUIRED] flag: --resources; Please provide the absolute path to an existing JSON file containing compute resources for pipeline."
+        ), "missing [REQUIRED] flag: --resources; Please provide the path to an existing JSON file containing SLURM SBATCH flags."
+
+        # Resolve any relative path entered for --resources
+        _resolved_resource_path = Path(run.args.resource_config).resolve()
         
         # Confirm path provide is valid 
-        assert Path(
-            run.args.resource_config
-        ).is_file(), f"unable to find the resource config JSON file | '{run.args.resource_config}'"
+        assert _resolved_resource_path.is_file(), f"unable to find the resource config JSON file | '{_resolved_resource_path}'"
         
-        # Make the flag [REQUIRED] 
+        # Make the flag --reference-prefix [REQUIRED] 
         assert (
             run.args.ref_file
-        ), "missing [REQUIRED] flag: --reference; Please provide the absolute path to an existing .FASTA.FAI file for the reference genome."
+        ), "missing [REQUIRED] flag: --reference-prefix; Please provide <path/prefix_only> for a reference genome (.FASTA)."
         
-        # Confirm ref prefix provided points to existing file(s)
+        # Resolve any relative path entered for --reference-prefix
         _resolved_ref_path = Path(run.args.ref_file).resolve()
         
+        # Confirm that the both a FASTA and INDEX file are available
         _reference_files = iterdir_with_prefix(
             absolute_path=_resolved_ref_path.parent,
             prefix=_resolved_ref_path.name,
-            valid_suffixes=[".fasta", ".fa", ".fai", ".dict"]
+            valid_suffixes=[".fasta", ".fa", ".fai", ".dict", ".FASTA", ".FA", ".FAI", ".DICT"],
             )
         
-        assert (len(_reference_files) > 2), f"unable to find the minimum number of reference genome file(s) | '{run.args.ref_file}'"
+        assert (len(_reference_files) > 2), f"unable to find at least two reference genome files (.FASTA + .FAI) | '{run.args.ref_file}'"
         
-        # Convert a comma-separated string into a python list 
+        # Convert a potential comma-separated string of checkpoint prefixes into a iterable list 
         if "," in run.args.model_prefix:
             _ckpt_list = run.args.model_prefix.split(",")
         else:
@@ -198,19 +204,67 @@ def __init__() -> None:
         assert (_no_valid_checkpoint is False), f"unable to find a supported checkpoint (e.g., DeepVariant or Cue) | '{run.args.model_prefix}'"
         
         # Get the expected default checkpoint path (custom bovid-trained WGS AF)
-        _default_ckpt = Path(run.get_arg_default("model_prefix")).resolve()
-            
-        # Get the checkpoint entered at the command line
-        _user_ckpt = Path(run.args.model_prefix).resolve()
+        _default_ckpt_prefix = Path(run.get_arg_default("model_prefix")).resolve()
 
-        if _use_deepvariant:
-            # If using the pipeline's default DeepVariant checkpoint,
-            if _user_ckpt == _default_ckpt:
-                # Confirm a PopVCF containing allele frequency data was provided by the user
-                assert (Path(run.args.pop_file).resolve().is_file() is True), f"invalid --allele-freq; unable to use the custom bovine-trained checkpoint without a PopVCF."
+        # print("MODEL PREFIX:", run.args.model_prefix)
+        # print("DEEP VARIANT:", _use_deepvariant)
+        # print(type(_use_deepvariant[0]))
+        # # print("CUE:", _use_cue)
+        # breakpoint()
         
+        # Create an empty list to store valid checkpoint paths
+        _list_of_ckpt_prefixes = list()
+
+        if _use_deepvariant and len(_use_deepvariant) == 1:
+            
+            # Identify the DeepVariant checkpoint prefix entered
+            _user_ckpt_prefix = Path(_use_deepvariant[0]).resolve()
+            
+            # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383),
+            if _user_ckpt_prefix == _default_ckpt_prefix:
+                
+                # If so, make the flag --allele-freq [REQUIRED] 
+                assert (
+                    run.args.pop_file
+                ), "missing [REQUIRED] flag: --allele-freq; Please add a PopVCF to use the custom bovine-trained checkpoint (model.ckpt-282383)." 
+                
+                # Resolve any relative path entered for --allele-freq
+                _resolved_pop_path = Path(run.args.pop_file).resolve()
+                
+                # Confirm the PopVCF file is available
+                assert (_resolved_pop_path.is_file() is True), f"unable to find the PopVCF file | '{_resolved_pop_path}'"
+                run.args.pop_file = _resolved_pop_path
+                
+                _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
+            
+            else:
+                print("ADD LOGIC FOR DIFFERENT DEEPVARIANT CHECKPOINTS")
+                breakpoint()
+            
+            # Confirm that all the expected checkpoint files are available
+            # print("ABSOLUTE PATH:", _user_ckpt_prefix.parent)
+            # print("PREFIX:", _user_ckpt_prefix.name)
+            # breakpoint()
+            _checkpoint_files = iterdir_with_prefix(
+                absolute_path=_user_ckpt_prefix.parent,
+                prefix=_user_ckpt_prefix.name,
+                valid_suffixes=[".data-00000-of-00001", ".json", ".index", ".meta",],
+                )
+            # print("CHECKPOINT FILES:", _checkpoint_files)
+            # print("NUMBER OF CHECKPOINT FILES:", len(_checkpoint_files))
+            # breakpoint()
+            
+            assert (len(_checkpoint_files) == 4), f"unable to find all four DeepVariant checkpoint files | '{_user_ckpt_prefix}'"
+        
+        if _use_cue:
+            print("ADD LOGIC CUE CHECKPOINT")
+            breakpoint()
+        
+        assert (len(_list_of_ckpt_prefixes) >= 1), f"unable to find at least one valid checkpoint | '{_user_ckpt_prefix}'"
+            
         # Save the list as a new command-line argument
-        run.args.model_prefix = [Path(p) for p in _ckpt_list]
+        # run.args.model_prefix = [Path(p).resolve() for p in _ckpt_list]
+        run.args.model_prefix = _list_of_ckpt_prefixes
         
     except AssertionError as error:
         run.logger.error(f"{error}.\nExiting... ")
@@ -227,10 +281,6 @@ def __init__() -> None:
     )
     _cl_inputs.update_mode()
     _cl_inputs.create_logging_msg()
-    
-    # CLUSTER-SPECIFIC SOFTWARE MODULES / DEPENDENCIES:
-    # Update command-line args to be absolute path as a Path() obj
-    run.args.modules = Path(_resolved_module_path)
      
     # REFERENCE: Confirm a .fai index file exists prior to running PICARD CreateSequenceDict()
     for file in _reference_files:
@@ -256,12 +306,12 @@ def __init__() -> None:
             exit(1)
     else:
         # TO DO: enable providing an input directory (e.g., samples + metadata together)?
-        run.logger.error(f"invalid --input; expected the absolute path to a file, did you enter a directory? | {run._input_path}\nExiting...")
+        run.logger.error(f"invalid --input; expected a file, did you enter a directory? | {run._input_path}\nExiting...")
         exit(1)
 
     # OUTPUT PATH: Determine if a file name was given as output, when it should be a directory
     if run._output_path.stem != run._output_path.name:
-        run.logger.error(f"invalid --output-path; expected the absolute path to a directory, did you enter a file? | {run._output_path}\nExiting...")
+        run.logger.error(f"invalid --output-path; expected a directory, did you enter a file? | {run._output_path}\nExiting...")
         exit(1)
     else:
         # Create a new directory, if necessary 
