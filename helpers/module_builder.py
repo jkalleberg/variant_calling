@@ -7,12 +7,17 @@ example usage: from helpers.module_builder import CustomModule
 """
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import path as p
 from pathlib import Path
 from sys import path
 from traceback import extract_stack
-from typing import Union, List
+from typing import Union, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import logging.Logger
+    from argparse import ArgumentParser, Namespace
+    from pathlib import Path
 
 abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
@@ -26,6 +31,21 @@ class CustomModule:
     """
     Enable fast development of custom Python modules.
     """
+    # Optional parameters
+    output_required: bool = True
+    
+    # internal parameters
+    _args: Union[None, "Namespace"] = field(default=None, init=False, repr=False)
+    _current_file: Union[None, str] = field(default=None, init=False, repr=False)
+    _debug_mode: bool = field(default=False, init=False, repr=False)
+    _dry_run_mode: bool = field(default=False, init=False, repr=False)
+    _input_path: Union[None, "Path"] = field(default=None, init=False, repr=False)
+    _logger: Union[None, "logging.Logger"] = field(default=None, init=False, repr=False)
+    _logger_msg: Union[None, str] = field(default=None, init=False, repr=False)
+    _module_name: Union[None, str] = field(default=None, init=False, repr=False)
+    _output_path: Union[None, "Path"] = field(default=None, init=False, repr=False)
+    _overwrite: bool = field(default=False, init=False, repr=False) 
+    _parser: Union[None, "ArgumentParser"] = field(default=None, init=False, repr=False)
 
     def get_caller_file(self) -> None:
         """
@@ -41,7 +61,7 @@ class CustomModule:
             self._current_file = modules[0].filename
 
         self._module_name = p.splitext(p.basename(self._current_file))[0]
-        self.logger = get_logger(self._module_name)
+        self._logger = get_logger(self._module_name)
 
     def build_args(self) -> None:
         """
@@ -51,14 +71,15 @@ class CustomModule:
             description=__doc__,
             formatter_class=argparse.RawTextHelpFormatter,
         )
-        self._parser.add_argument(
-            "-O",
-            "--output-path",
-            dest="out_path",
-            type=str,
-            help="[REQUIRED]\noutput path\nLocation to save resulting file(s).",
-            metavar="</path/>",
-        )
+        if self.output_required:
+            self._parser.add_argument(
+                "-O",
+                "--output-path",
+                dest="out_path",
+                type=str,
+                help="[REQUIRED]\noutput path\nLocation to save resulting file(s).",
+                metavar="</path/>",
+            )
         self._parser.add_argument(
             "-I",
             "--input",
@@ -101,19 +122,19 @@ class CustomModule:
         Process command line argument to execute a script.
         """
         if manual_args is None:
-            self.args = self._parser.parse_args()
+            self._args = self._parser.parse_args()
         else:
-            self.args = self._parser.parse_args(manual_args)
+            self._args = self._parser.parse_args(manual_args)
         
-        if self.args.debug:
+        if self._args.debug:
             str_args = "COMMAND LINE ARGS USED: "
-            for key, val in vars(self.args).items():
+            for key, val in vars(self._args).items():
                 str_args += f"{key}={val} | "
 
-            self.logger.debug(str_args)
+            self._logger.debug(str_args)
 
-        if self.args.dry_run:
-            self.logger.info(
+        if self._args.dry_run:
+            self._logger.info(
                 "[DRY_RUN]: output will display to screen and not write to a file"
             )
 
@@ -123,24 +144,25 @@ class CustomModule:
         With "--dry-run", display a msg.
         Then, check to make sure all required flags are provided.
         """
-        assert (
-            self.args.out_path
-        ), "missing [REQUIRED] flag: --output; Please provide a directory or file name for saving results."
+        if self.output_required:
+            assert (
+                self._args.out_path
+            ), "missing [REQUIRED] flag: --output; Please provide a directory or file name for saving results"
 
-        # Resolve potential relative path entered
-        _resolved_out_path = Path(self.args.out_path).resolve()
-        self.args.out_path = _resolved_out_path
+            # Resolve potential relative path entered
+            _resolved_out_path = Path(self._args.out_path).resolve()
+            self._args.out_path = _resolved_out_path
         
         assert (
-            self.args.input
-        ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file."
+            self._args.input
+        ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file"
         
         # Resolve potential relative path entered
-        _resolved_in_path = Path(self.args.input).resolve()
+        _resolved_in_path = Path(self._args.input).resolve()
         
         # Confirm resolved Path is valid
         assert (_resolved_in_path.is_file() or _resolved_in_path.is_dir()), f"unable to find the input path | '{_resolved_in_path}'"
-        self.args.input = _resolved_in_path
+        self._args.input = _resolved_in_path
     
     def get_arg_default(self, arg_name: str = "input") -> str:
         """
@@ -152,15 +174,20 @@ class CustomModule:
         """
         Handle expected defaults provide at the command line.
         """
-        if self.args.dry_run:
-            self.logger_msg = f"[DRY_RUN] - [{self._module_name}]"
+        if self._args.dry_run:
+            self._logger_msg = f"[DRY_RUN] - [{self._module_name}]"
         else:
-            self.logger_msg = f"[{self._module_name}]"
+            self._logger_msg = f"[{self._module_name}]"
 
-        self._output_path = Path(self.args.out_path).resolve()
-        self._input_path = Path(self.args.input).resolve()
-        self._debug_mode = self.args.debug
-        self._dry_run_mode = self.args.dry_run
+        if self.output_required:
+            self._output_path = Path(self._args.out_path).resolve()
+        else:
+            self._output_path = None
+        
+        self._input_path = Path(self._args.input).resolve()
+        self._debug_mode = self._args.debug
+        self._dry_run_mode = self._args.dry_run
+        self._overwrite = self._args.overwrite
 
     def start_module(self) -> None:
         """

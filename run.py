@@ -18,7 +18,6 @@ abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
 path.append(module_path)
 
-# from helpers.files import File
 from helpers.utils import partial_match_case_insensitive, check_if_all_same, iterdir_with_prefix
 from helpers.module_builder import CustomModule
 from helpers.inputs import InputManager
@@ -144,41 +143,41 @@ def __init__() -> None:
         ]
     )
     
-    # Check generic command-line flags
-    run.check_args()
-    
-    # Check custom command line flags 
     try:
+        # Check generic command-line flags
+        run.check_args()
+        
+        # Check custom command line flags 
         # Make the --modules flag [REQUIRED]
         assert (
-            run.args.modules
-        ), f"missing [REQUIRED] flag: --modules; Please provide the path to an existing modules BASH file containing HPC-cluster-specific software dependencies."
+            run._args.modules
+        ), f"missing [REQUIRED] flag: --modules; Please provide the path to an existing modules BASH file containing HPC-cluster-specific software dependencies"
         
         # Resolve any relative path entered for modules.sh
-        _resolved_module_path = Path(run.args.modules).resolve()
+        _resolved_module_path = Path(run._args.modules).resolve()
         
         # Confirm path provide is valid
         assert _resolved_module_path.is_file(), f"unable to find the modules file | '{_resolved_module_path}'"
-        run.args.modules = _resolved_module_path
+        run._args.modules = _resolved_module_path
         
         # Make the --resources flag [REQUIRED] 
         assert (
-            run.args.resource_config
-        ), "missing [REQUIRED] flag: --resources; Please provide the path to an existing JSON file containing SLURM SBATCH flags."
+            run._args.resource_config
+        ), "missing [REQUIRED] flag: --resources; Please provide the path to an existing JSON file containing SLURM SBATCH flags"
 
         # Resolve any relative path entered for --resources
-        _resolved_resource_path = Path(run.args.resource_config).resolve()
+        _resolved_resource_path = Path(run._args.resource_config).resolve()
         
         # Confirm path provide is valid 
         assert _resolved_resource_path.is_file(), f"unable to find the resource config JSON file | '{_resolved_resource_path}'"
         
         # Make the flag --reference-prefix [REQUIRED] 
         assert (
-            run.args.ref_file
-        ), "missing [REQUIRED] flag: --reference-prefix; Please provide <path/prefix_only> for a reference genome (.FASTA)."
+            run._args.ref_file
+        ), "missing [REQUIRED] flag: --reference-prefix; Please provide <path/prefix_only> for a reference genome (.FASTA)"
         
         # Resolve any relative path entered for --reference-prefix
-        _resolved_ref_path = Path(run.args.ref_file).resolve()
+        _resolved_ref_path = Path(run._args.ref_file).resolve()
         
         # Confirm that the both a FASTA and INDEX file are available
         _reference_files = iterdir_with_prefix(
@@ -187,13 +186,13 @@ def __init__() -> None:
             valid_suffixes=[".fasta", ".fa", ".fai", ".dict", ".FASTA", ".FA", ".FAI", ".DICT"],
             )
         
-        assert (len(_reference_files) > 2), f"unable to find at least two reference genome files (.FASTA + .FAI) | '{run.args.ref_file}'"
+        assert (len(_reference_files) > 2), f"unable to find at least two reference genome files (.FASTA + .FAI) | '{run._args.ref_file}'"
         
         # Convert a potential comma-separated string of checkpoint prefixes into a iterable list 
-        if "," in run.args.model_prefix:
-            _ckpt_list = run.args.model_prefix.split(",")
+        if "," in run._args.model_prefix:
+            _ckpt_list = run._args.model_prefix.split(",")
         else:
-            _ckpt_list = [run.args.model_prefix]
+            _ckpt_list = [run._args.model_prefix]
         
         # Check for supported variant callers
         _use_deepvariant = partial_match_case_insensitive("deepvariant", _ckpt_list)
@@ -201,12 +200,12 @@ def __init__() -> None:
         
         # Confirm at least one supported variant caller was provided
         _no_valid_checkpoint = check_if_all_same([_use_deepvariant, _use_cue], None)
-        assert (_no_valid_checkpoint is False), f"unable to find a supported checkpoint (e.g., DeepVariant or Cue) | '{run.args.model_prefix}'"
+        assert (_no_valid_checkpoint is False), f"unable to find a supported checkpoint (e.g., DeepVariant or Cue) | '{run._args.model_prefix}'"
         
         # Get the expected default checkpoint path (custom bovid-trained WGS AF)
         _default_ckpt_prefix = Path(run.get_arg_default("model_prefix")).resolve()
 
-        # print("MODEL PREFIX:", run.args.model_prefix)
+        # print("MODEL PREFIX:", run._args.model_prefix)
         # print("DEEP VARIANT:", _use_deepvariant)
         # print(type(_use_deepvariant[0]))
         # # print("CUE:", _use_cue)
@@ -225,15 +224,15 @@ def __init__() -> None:
                 
                 # If so, make the flag --allele-freq [REQUIRED] 
                 assert (
-                    run.args.pop_file
-                ), "missing [REQUIRED] flag: --allele-freq; Please add a PopVCF to use the custom bovine-trained checkpoint (model.ckpt-282383)." 
+                    run._args.pop_file
+                ), "missing [REQUIRED] flag: --allele-freq; Please add a PopVCF to use the custom bovine-trained checkpoint (model.ckpt-282383)" 
                 
                 # Resolve any relative path entered for --allele-freq
-                _resolved_pop_path = Path(run.args.pop_file).resolve()
+                _resolved_pop_path = Path(run._args.pop_file).resolve()
                 
                 # Confirm the PopVCF file is available
                 assert (_resolved_pop_path.is_file() is True), f"unable to find the PopVCF file | '{_resolved_pop_path}'"
-                run.args.pop_file = _resolved_pop_path
+                run._args.pop_file = _resolved_pop_path
                 
                 _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
             
@@ -263,11 +262,11 @@ def __init__() -> None:
         assert (len(_list_of_ckpt_prefixes) >= 1), f"unable to find at least one valid checkpoint | '{_user_ckpt_prefix}'"
             
         # Save the list as a new command-line argument
-        # run.args.model_prefix = [Path(p).resolve() for p in _ckpt_list]
-        run.args.model_prefix = _list_of_ckpt_prefixes
+        # run._args.model_prefix = [Path(p).resolve() for p in _ckpt_list]
+        run._args.model_prefix = _list_of_ckpt_prefixes
         
     except AssertionError as error:
-        run.logger.error(f"{error}.\nExiting... ")
+        run._logger.error(f"{error}.\nExiting... ")
         exit(1)
     
     # Initialize all command line inputs
@@ -275,8 +274,8 @@ def __init__() -> None:
     
     # Handle custom inputs needed for the generic variant calling pipeline
     _cl_inputs = InputManager(
-        args=run.args,
-        logger=run.logger,
+        args=run._args,
+        logger=run._logger,
         phase="setup",
     )
     _cl_inputs.update_mode()
@@ -286,32 +285,33 @@ def __init__() -> None:
     for file in _reference_files:
         if "fai" in file.suffix.lower():
             # Update the command-line args to point to the FASTA file as a Path() object
-            run.args.ref_file  = Path(file).parent / Path(file).stem
+            run._args.ref_file  = Path(file).parent / Path(file).stem
         
-    if isinstance(run.args.ref_file, Path) and run.args.ref_file.is_file():
+    if isinstance(run._args.ref_file, Path) and run._args.ref_file.is_file():
         if _cl_inputs.debug_mode:
-            run.logger.debug(f"{_cl_inputs.logger_msg}: valid --reference FASTA file | '{run.args.ref_file}'")
+            run._logger.debug(f"{_cl_inputs.logger_msg}: valid --reference FASTA file | '{run._args.ref_file}'")
     else:
         _files_found = ",".join(_reference_files)
-        run.logger.error(f"{_cl_inputs.logger_msg}: missing a .fai index file in reference genome directory\nFiles found: {_files_found}")
+        run._logger.error(f"{_cl_inputs.logger_msg}: missing a .fai index file in reference genome directory\nFiles found: {_files_found}")
     
-    # INPUT PATH: Determine if a file name was given as output, when it should be a directory
+    # INPUT PATH: Determine if a directory name was given as input, when it should be a file
     if run._input_path.stem != run._input_path.name:
         # Confirm input is an existing file
         if run._input_path.is_file():
             if _cl_inputs.debug_mode:
-                run.logger.debug(f"{_cl_inputs.logger_msg}: valid --input; detected an existing file.")
+                run._logger.debug(f"{_cl_inputs.logger_msg}: valid --input; detected an existing file.")
+            _cl_inputs._input_path = run._input_path
         else:
-            run.logger.error(f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {run._input_path}\nExiting...")
+            run._logger.error(f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {run._input_path}\nExiting...")
             exit(1)
     else:
         # TO DO: enable providing an input directory (e.g., samples + metadata together)?
-        run.logger.error(f"invalid --input; expected a file, did you enter a directory? | {run._input_path}\nExiting...")
+        run._logger.error(f"invalid --input; expected a file, did you enter a directory? | {run._input_path}\nExiting...")
         exit(1)
 
     # OUTPUT PATH: Determine if a file name was given as output, when it should be a directory
     if run._output_path.stem != run._output_path.name:
-        run.logger.error(f"invalid --output-path; expected a directory, did you enter a file? | {run._output_path}\nExiting...")
+        run._logger.error(f"invalid --output-path; expected a directory, did you enter a file? | {run._output_path}\nExiting...")
         exit(1)
     else:
         # Create a new directory, if necessary 
@@ -319,11 +319,10 @@ def __init__() -> None:
             _cl_inputs.create_a_dir(dir_name=run._output_path)
         else:
             if _cl_inputs.debug_mode:
-                run.logger.debug(f"{_cl_inputs.logger_msg}: valid --output-path; detected an existing directory.")
-    
-    # Save valid command-line inputs
-    _cl_inputs._output_path = run._output_path
-    _cl_inputs._input_path = run._input_path
+                run._logger.debug(f"{_cl_inputs.logger_msg}: valid --output-path; detected an existing directory.")
+
+        # Save valid command-line inputs
+        _cl_inputs._output_path = run._output_path
                 
     # Load in SLURM resource config file
     _cl_inputs.load_slurm_resources()
