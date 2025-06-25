@@ -443,10 +443,10 @@ class File:
         Union[str, None]
             a pickled 'Genome' object
         """
-        self._file.check_existing()
+        self.check_status(should_file_exist=True)
 
-        if self._file._file_exists:
-            with open(self._file.path, "rb") as inp:
+        if self.file_exists:
+            with open(str(self.path), "rb") as inp:
                 return load(inp)
 
     def load_json_file(self) -> None:
