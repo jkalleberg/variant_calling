@@ -102,7 +102,7 @@ class Science:
         """
         bindings = [self._base_binding, f"{getcwd()}/:/run_dir/"]
         
-        # Only select the variable PATHs, ignoring the file name(s) for now        
+        # Only select the variable PATHs, ignoring the file name(s) for now       
         _variable_paths = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "path" in key.lower()}
         
         for binding_name, path in _variable_paths.items():
@@ -178,6 +178,7 @@ class Science:
         
         # Select only the variable names, ignoring the variable paths
         _variable_names = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "name" in key.lower()}
+        
         for k,v in _variable_names.items():
             _k_prefix = k.split("_")[0]
             _binding = f"{_k_prefix}_path"
@@ -194,13 +195,14 @@ class Science:
                     flags.append(f"--output_gvcf=/{_binding}/{v}")
                 else:
                     flags.append(f"--output_vcf=/{_binding}/{v}")
-            elif "temp" in k or "tmp" in k:
-                flags.append(f"--intermediate_results_dir=/{_binding}/{v}")
             elif "pop" in k:
                 flags.append(f'--make_examples_extra_args="use_allele_frequency=true,population_vcfs=/{_binding}/{v}"') 
             else:
                 print("UNEXPECTED FLAG NAME FOUND!")
                 breakpoint()
+        
+        # Add a flag to control where temp files are stored (i.e., not TMPDIR)
+        flags.append(f"--intermediate_results_dir=/temp_path/")
 
         self._flags_str = " ".join(flags)
         
