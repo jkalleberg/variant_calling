@@ -159,8 +159,8 @@ class Pipeline:
                     
                     # Revert the logger message back to original
                     self.pipeline_inputs.cl_inputs.logger_msg = _original_logger_msg
-                    print("END OF A SINGLE GENOME VARIANT CALLING")
-                    breakpoint()
+                    # print("END OF A SINGLE GENOME VARIANT CALLING")
+                    # breakpoint()
                     
                  
 

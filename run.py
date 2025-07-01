@@ -128,9 +128,9 @@ def __init__() -> None:
             "--allele-freq", 
             "../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
             
-            "--dry-run",
+            # "--dry-run",
             # "--debug",
-            # "--overwrite",
+            "--overwrite",
             
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
             # "--resources",

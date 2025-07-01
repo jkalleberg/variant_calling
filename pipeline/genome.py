@@ -550,7 +550,7 @@ class Genome:
         
             print("ANY LINES CREATED?", self._science._n_lines is not None)
             print("OVERWRITE?", self.pipeline_inputs.cl_inputs.overwrite)
-            breakpoint()
+            # breakpoint()
      
     # def update_logging(self) -> None:
     #     if self._reads_path is None:

@@ -38,7 +38,6 @@ conda install -p ./miniconda_envs/dev -y bitarray cachetools intervaltree joblib
 
 conda install -p ./miniconda_envs/dev -y python-dotenv regex natsort mkdocs mkdocs-material black spython
 
-
 ###===== Notes about specific packages =====###
 ### Python = version required? 
 ### Scipy = scientific libraries for Python
