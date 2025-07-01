@@ -6,6 +6,7 @@
 
 # Ignore conda envs
 miniconda_envs/
+mamba_envs/
 
 # Ignore Apptainer containers
 /APPTAINER_CACHE/
