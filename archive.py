@@ -36,7 +36,7 @@ def __init__() -> None:
         [
             "-I",
             "../CATTLE_TEST/1051/1051.pkl",
-            "--dry-run",
+            # "--dry-run",
             # "--debug",
             # "--overwrite",
         ])

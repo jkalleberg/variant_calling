@@ -248,7 +248,7 @@ class CleanUp:
                     f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: pretending to delete {self._things_to_delete}-of-{self._num_files} items would save {_str}"
                 )
         else:
-            self.genome.pipeline_inputs.cl_inputs.logger.debug(
+            self.genome.pipeline_inputs.cl_inputs.logger.info(
                 f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: disk space cleared after deleting {self._things_to_delete}-of-{self._num_files} items | {_str}"
             )
 
