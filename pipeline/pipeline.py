@@ -40,7 +40,7 @@ class Pipeline:
 
     # def subdivide_group(self, current_index: int, subset_size: int) -> bool:
     #     """
-    #     Controls when to provide logging updates during large variant calling cohorts given to an iterative loop within all_genomes() .
+    #     Controls when to provide logging updates during large variant calling cohorts given to an iterative loop within process_cohort() .
 
     #     Parameters
     #     ----------
@@ -60,9 +60,9 @@ class Pipeline:
     #     else:
     #         return False
 
-    def all_genomes(self) -> None:
+    def process_cohort(self) -> None:
         """
-        Loop through all unique genomes provided by the user.
+        Loop through all unique Genomes() provided by the user.
         """
         # if self.pipeline_inputs.cl_inputs.args.check_samples:
         #     self._previously_run_samples = [dep for dep in self.pipeline_inputs.cl_inputs.args.check_samples.split(",")]

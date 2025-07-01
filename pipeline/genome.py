@@ -45,7 +45,6 @@ class Genome:
     # _default_output: Union[None, "File"] = field(default=None, init=False, repr=False)
     # _missing_output: bool = field(default=True, init=False, repr=False)
     _model_type: Union[str, None] = field(default="DeepVariant", init=False, repr=False)
-    _pickle_file: Union[None, File] = field(default=None, init=False, repr=False)
     _reads_path: Union[Path, None] = field(default=None, init=False, repr=False)
     _variables: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     _new_lines: List[str] = field(default_factory=list, init=False, repr=False)
@@ -58,6 +57,7 @@ class Genome:
     _scratch_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _tmp_dir: Union[None, Path] = field(default=None, init=False, repr=False)  
 
+    # _pickle_file: Union[None, File] = field(default=None, init=False, repr=False)
     # _check_dict: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     # # _chrom: Union[str, None] = field(default=None, init=False, repr=False)
     # _data_dict: Dict[str, Union[str, int, List[str]]] = field(
@@ -505,6 +505,32 @@ class Genome:
 
         self._slurm_job.create_slurm_job(handler_status_label=f"variant_calling:{self._model_type}")
 
+        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        # print("DEFAULT OUTPUT:", _default_output.path)
+
+        # print("PICKLE FILE:", self._pickle_file.path) 
+        # # self.pipeline_inputs.find_pickled_samples(expect_existing=True)
+        # # print("PICKLE FILE:", self.pipeline_inputs._samples_pickle.path)
+        # breakpoint()
+
+        # Create a sample-stats CSV file
+        self._slurm_job.create_slurm_job(
+            handler_status_label=f"get_stats:{self._model_type}",
+            content_list=[f"bash scripts/get_stats.sh {_default_output.path}"],
+        )
+
+        # Remove temporary files
+        if self._pickle_file.path.is_file() or self.pipeline_inputs.cl_inputs.dry_run_mode:
+            self._slurm_job.create_slurm_job(
+                handler_status_label=f"archive:{self._model_type}",
+                content_list=[f"python3 archive.py -I {self._pickle_file.path}"],
+            )
+
+        # Add a final line at the end of the SBATCH
+        self._slurm_job.create_slurm_job(
+            content_list=["echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science ends now.'"]
+        )
+
         # Actually generate the SBATCH file, or pretend to
         if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
             self._slurm_job.display_job()
@@ -512,7 +538,7 @@ class Genome:
             self._slurm_job.display_job()
             self._slurm_job.write_job()
         else:
-            self._slurm_job.write_job()    
+            self._slurm_job.write_job()  
 
     def submit_job(
         self,

@@ -67,7 +67,7 @@ class Science:
     #         f"export JOBLIB_TEMP_FOLDER={self.genome._tmp_dir}/",
     #         f"python3 ../cue/engine/call.py --data_config {str(self.genome._data_yaml)} --model_config {str(self.genome._model_yaml)}",
     #     ]
-    
+
     def setup_container(self, type: str = "CPU") -> None:
         """
         Determine which Apptainer container to use.
@@ -76,11 +76,11 @@ class Science:
         """        
         if self.genome._model_type == "DeepVariant":
             _input_version = self.genome.pipeline_inputs.variant_callers[self.genome._model_type]["version"].split("_")[0]
-            
+
             # Matches any character that is NOT a letter or a space
             # (i.e., it keeps digits and special characters)
             self._version = "".join(re.findall(r'[^a-zA-Z\s]', _input_version))
-            
+
             if type == "GPU":
                 self._container = f"{self.genome._model_type.lower()}_{self._version}-gpu.sif"
             else:
@@ -95,16 +95,16 @@ class Science:
             breakpoint()
 
         self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: using the {type} container | '{self._container}'")
-    
+
     def create_bindings(self) -> None:
         """
         Create the path bindings for Apptainer/Singularity
         """
         bindings = [self._base_binding, f"{getcwd()}/:/run_dir/"]
-        
-        # Only select the variable PATHs, ignoring the file name(s) for now       
+
+        # Only select the variable PATHs, ignoring the file name(s) for now
         _variable_paths = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "path" in key.lower()}
-        
+
         for binding_name, path in _variable_paths.items():
             if f"/{binding_name}/" not in bindings:
                 _new_binding = f"{path}/:/{binding_name}/"
@@ -118,7 +118,7 @@ class Science:
         self._bindings_str = ",".join(bindings)
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
             self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: container bindings | '{self._bindings_str}'")
-        
+
     def setup_slurm_config(self) -> None:
         """
         Confirm the user has provided multiple processing cores in a SLURM config file.
@@ -159,7 +159,7 @@ class Science:
         )
         print(get_help["message"])
         # print(get_help["message"][0])
-    
+
     def build_deepvariant_cmd(self,
                               sequence_type: str = "WGS",
                               ) -> None:
@@ -169,16 +169,16 @@ class Science:
         self.setup_container()
         self.create_bindings()
         self.setup_slurm_config() 
-        
+
         flags = [
             f"--model_type={sequence_type}",
             f"--num_shards={self._nproc}",
             f"--sample_name={self.genome._sample_id}",
         ]
-        
+
         # Select only the variable names, ignoring the variable paths
         _variable_names = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "name" in key.lower()}
-        
+
         for k,v in _variable_names.items():
             _k_prefix = k.split("_")[0]
             _binding = f"{_k_prefix}_path"
@@ -200,17 +200,19 @@ class Science:
             else:
                 print("UNEXPECTED FLAG NAME FOUND!")
                 breakpoint()
-        
+
         # Add a flag to control where temp files are stored (i.e., not TMPDIR)
         flags.append(f"--intermediate_results_dir=/temp_path/")
 
         self._flags_str = " ".join(flags)
-        
+
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
             self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: flags used | '{self._flags_str}'")
-            
+
+        # print(self.genome._variables[self.genome._model_type])
+
         _dv_command_list = [
-            f'echo "INFO: using {self.genome._model_type} with {self.genome._variables[self.genome._model_type]["ckpt_name"]} to call variants for sample={self.genome._sample_id}"',
+            f'echo "$(date \'+%Y-%m-%d %H:%M:%S\') INFO: using {self.genome._model_type} with {self.genome._variables[self.genome._model_type]["ckpt_name"]} to call variants for sample={self.genome._sample_id}"',
             f"time apptainer run -B {self._bindings_str} {self._container} /opt/deepvariant/bin/run_deepvariant {self._flags_str}",
         ]
         self.update_command(cmd_list=_dv_command_list)

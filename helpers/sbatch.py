@@ -79,9 +79,9 @@ class SBATCH:
             ]
         
         if self._start_sbatch:
-            self._start_sbatch.append("echo '=== Science Starts Now: '$(date '+%Y-%m-%d %H:%M:%S')")
+            self._start_sbatch.append("echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science starts now:'")
         else:
-            self._start_sbatch = ["echo '=== Science Starts Now: '$(date '+%Y-%m-%d %H:%M:%S')"]
+            self._start_sbatch = ["echo '$(date '+%Y-%m-%d %H:%M:%S')' INFO: Science starts now:'"]
         
         self._job_name = self.job_file.path.stem
 
@@ -206,7 +206,6 @@ class SBATCH:
         content_list: Union[None, List[str]] = None,
         handler_status_label: Union[None, str] = None,
         content_index: int = -1,
-        # overwrite: bool = False,
     ) -> None:
         """
         Combine SLURM SBATCH header lines, with Linux/Bash command(s) for execution after job submission to SLURM queue.

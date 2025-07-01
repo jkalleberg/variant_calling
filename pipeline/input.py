@@ -252,7 +252,7 @@ class PipelineInputManager:
         )
         self._new_samples_csv.check_status()
     
-    def find_pickled_samples(self) -> None:
+    def find_pickled_samples(self, expect_existing: bool = False) -> None:
         """
         Identify if sample processing is necessary.
         """
@@ -261,9 +261,9 @@ class PipelineInputManager:
         
         self._samples_pickle = File(
             path_to_file=_sample_file_path / f"{_sample_file_name}.pkl",
-            inputs=self.cl_inputs,
+            cl_inputs=self.cl_inputs,
         )
-        self._samples_pickle._file.check_missing() 
+        self._samples_pickle.check_status(should_file_exist=expect_existing)
     
     def count_inputs(self) -> None:
         """
@@ -323,7 +323,10 @@ class PipelineInputManager:
         """
         Determine if the input file needs to be opened, or if the pickled input file can be re-used.
         """
-        self.find_pickled_samples()
+        if self.cl_inputs.overwrite:
+            self.find_pickled_samples(expect_existing=True)
+        else:
+            self.find_pickled_samples(expect_existing=False)
         
         if self._samples_pickle._file._file_exists and not self.cl_inputs.overwrite:
             self.load_samples()

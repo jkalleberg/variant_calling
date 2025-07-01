@@ -118,8 +118,8 @@ def __init__() -> None:
             "-I",
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK 
             # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK 
-            # "./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
-            "tutorial/data/250627_Sutovsky_samples.csv",
+            "./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
+            # "./tutorial/data/250627_Sutovsky_samples.csv",
              
             "--reference",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
@@ -130,7 +130,7 @@ def __init__() -> None:
             
             # "--dry-run",
             # "--debug",
-            "--overwrite",
+            # "--overwrite",
             
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
             # "--resources",
@@ -378,7 +378,7 @@ def __init__() -> None:
     
     # Begin to iterate through all the samples
     _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs)
-    _group_of_samples.all_genomes()
+    _group_of_samples.process_cohort()
     
     print("STOP!")
     breakpoint()
