@@ -8,12 +8,9 @@ usage: python3 archive.py                 \
                     
 """
 
-# from os import path
-# from pathlib import Path
-# from typing import TYPE_CHECKING
-
 from pathlib import Path
 from sys import path, exit
+# from argparse import vars
 
 abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
@@ -22,20 +19,18 @@ path.append(module_path)
 from helpers.module_builder import CustomModule
 from helpers.inputs import InputManager
 from helpers.files import File
+from pipeline.genome import Genome
 
-# if TYPE_CHECKING:
-#     from genome import Genome
-# from clean_results import CleanUp
-
+from pipeline.clean_temps import CleanUp
 
 
 def __init__() -> None:
     archive = CustomModule(output_required=False)
     archive.start_module()
-    
+
     # Uncomment to force arg entry at command line
     # archive.collect_args()
-    
+
     # Edit for manually testing command line arguments
     archive.collect_args(
         [
@@ -53,11 +48,11 @@ def __init__() -> None:
     except AssertionError as error:
         archive._logger.error(f"{error}.\nExiting... ")
         exit(1)
-    
+
     # Initialize all command line inputs
     archive.process_args()
-        
-    # Handle  inputs needed
+
+    # Handle command-line inputs needed
     _cl_inputs = InputManager(
         args=archive._args,
         logger=archive._logger,
@@ -65,7 +60,7 @@ def __init__() -> None:
     )
     _cl_inputs.update_mode()
     _cl_inputs.create_logging_msg()
-    
+
     # INPUT PATH: Determine if a directory name was given as output, when it should be a directory
     if archive._input_path.stem != archive._input_path.name:
         # Confirm input is an existing file
@@ -87,21 +82,43 @@ def __init__() -> None:
         cl_inputs=_cl_inputs,
     )
     _genome = _pickle_file.load_pickle()
-    print("GENOME:", _genome)
-    print("MODEL NAME:", _genome._model_type)
-    print("TEMP DIR:", _genome._variables[_genome._model_type]["temp_path"])
-    breakpoint()
 
-    # try:
-    #     assert _genome, "unable to re-open the pickled Genome()"
-    #     assert isinstance(_genome, Genome), "unable to re-open the pickled Genome()"
+    try:
+        # Confirm that a pickled Genome() object was loaded
+        assert _genome, "unable to re-open the pickled Genome()"
+        assert isinstance(_genome, Genome), "unable to re-open the pickled Genome()"
 
-    #     # update the 'mode' based on current script args
-    #     _genome.iter.inputs = inputs
-    #     clean_files = CleanUp(genome=_genome)
-    #     clean_files.remove_lg_intermediates()
-    
-    
+        # Update the 'mode' based on current script args
+        _mode_args = ["debug", "dry_run", "overwrite"]
+
+        # For specific command-line args...
+        for arg in _mode_args:
+            # Determine if these args have been manually changed by the user
+            _current_value = vars(archive._args)[arg]
+            _previous_value = vars(_genome.pipeline_inputs.cl_inputs.args)[arg]
+            if _previous_value != _current_value:
+                setattr(_genome.pipeline_inputs.cl_inputs.args, arg, _current_value)
+
+        # Update the previous 'mode' argument
+        _genome.pipeline_inputs.cl_inputs.update_mode()
+
+        # Update the phase to reflect the current step
+        _genome.pipeline_inputs.cl_inputs.phase = _cl_inputs.phase
+        _genome.pipeline_inputs.cl_inputs.create_logging_msg()
+        _genome.pipeline_inputs.cl_inputs.logger = archive._logger
+
+        # Start the post-variant-calling clean up of temporary files
+        clean_files = CleanUp(genome=_genome)
+
+        for k, vs in _genome.pipeline_inputs.variant_callers.items():    # print(f"KEY: {k}={vs}") 
+            _default_output = vs["default_output"]
+            clean_files.check_output(default_output=_default_output)
+            clean_files.remove_all_intermediates()
+
+    except AssertionError as error:
+        archive._logger.error(f"{error}.\nExiting... ")
+        exit(1)
+
     archive.end_module()
 
 

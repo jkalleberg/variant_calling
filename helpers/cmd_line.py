@@ -10,7 +10,7 @@ from subprocess import PIPE, CalledProcessError, run
 from typing import TYPE_CHECKING, List, Union
 
 if TYPE_CHECKING:
-    from helpers.inputs import Inputs
+    from helpers.inputs import InputManager
 
 
 @dataclass
@@ -20,7 +20,7 @@ class CMD:
     """
 
     # required parameters
-    inputs: "Inputs"
+    cl_inputs: "InputManager"
 
     # interal parameters
     _job_cmd: List[str] = field(default_factory=list, repr=False, init=False)
@@ -49,16 +49,17 @@ class CMD:
 
         if interactive_mode:
             try:
-                if self.inputs.dry_run_mode:
-                    self.inputs.logger.info(
-                        f"{self.inputs.logger_msg}: pretending to execute the following | '{_command_str}'"
+                if self.cl_inputs.dry_run_mode:
+                    self.cl_inputs.logger.info(
+                        f"{self.cl_inputs.logger_msg}: pretending to execute the following | '{_command_str}'"
                     )
                     return
 
-                if self.inputs.debug_mode:
-                    self.inputs.logger.debug(
-                        f"{self.inputs.logger_msg}: starting '{type}' --------------------"
+                if self.cl_inputs.debug_mode:
+                    self.cl_inputs.logger.debug(
+                        f"{self.cl_inputs.logger_msg}: starting '{type}' --------------------"
                     )
+                
                 if keep_output:
                     result = run(
                         _command_str,
@@ -70,24 +71,24 @@ class CMD:
                     )
                 else:
                     result = run(command_list, check=True, stdout=PIPE)
-
+                
                 if result.returncode == 0:
                     self._errorcode = result.returncode
                     if not result.stdout and result.stderr:
                         output = str(result.stderr).strip()
                     else:
                         output = str(result.stdout).strip()
-
+                    
                     if output == "":
                         return None
                     else:
                         return output.split("\n")
                 else:
-                    self.inputs.logger.error(
-                        f"{self.inputs.logger_msg}: command used | '{_command_str}'"
+                    self.cl_inputs.logger.error(
+                        f"{self.cl_inputs.logger_msg}: command used | '{_command_str}'"
                     )
-                    self.inputs.logger.error(
-                        f"{self.inputs.logger_msg}: {result.stdout}"
+                    self.cl_inputs.logger.error(
+                        f"{self.cl_inputs.logger_msg}: {result.stdout}"
                     )
                     raise ChildProcessError(f"unable to complete '{type}'")
 
@@ -101,11 +102,11 @@ class CMD:
                     ]
                     return err.stdout.strip().split("\n")
                 else:
-                    self.inputs.logger.error(
-                        f"{self.inputs.logger_msg}: unable to execute '{err.cmd}'",
+                    self.cl_inputs.logger.error(
+                        f"{self.cl_inputs.logger_msg}: unable to execute '{err.cmd}'",
                     )
                     print(err)
-                    self.inputs.logger.error(f"{err.stderr.strip()}\nExiting... ")
+                    self.cl_inputs.logger.error(f"{err.stderr.strip()}\nExiting... ")
                     exit(err.returncode)
         else:
             self._n_new_lines += 1

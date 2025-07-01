@@ -49,7 +49,15 @@ class Genome:
     _reads_path: Union[Path, None] = field(default=None, init=False, repr=False)
     _variables: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     _new_lines: List[str] = field(default_factory=list, init=False, repr=False)
-    
+
+    _job_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _log_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _reports_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _results_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _sample_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _scratch_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _tmp_dir: Union[None, Path] = field(default=None, init=False, repr=False)  
+
     # _check_dict: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     # # _chrom: Union[str, None] = field(default=None, init=False, repr=False)
     # _data_dict: Dict[str, Union[str, int, List[str]]] = field(
@@ -60,24 +68,24 @@ class Genome:
     #     default_factory=list, init=False, repr=False
     # )
     # _jobid_found: Union[List[bool], None] = field(default=None, init=False, repr=False)
-    
+
     # _model_dict: Dict[str, Union[str, int, List[str]]] = field(
     #     default_factory=dict, init=False, repr=False
     # )
-    
+
     # _paths_found: List[Union[str, None]] = field(
     #     default_factory=list, init=False, repr=False
     # )
-    
+
     # _region: Union[None, str] = field(default=None, init=False, repr=False)
     # _skip_counter: int = field(default=0, init=False, repr=False)
     # _submitting_jobs: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        
+
         self._sample_num = str(self.sample[0]).zfill(count_digits(self.pipeline_inputs._total_num_genomes))
         self._sample_id = self.sample[1][0]
-        
+
         if self._sample_id is None:
             self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg}"
             _info = "UH OH!"
@@ -89,9 +97,9 @@ class Genome:
             _info = "samples"
         else:
             _info = "trios"
-        
+
         self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg} - [{self._sample_num}-of-{self.pipeline_inputs._total_num_genomes} {_info}]"
-    
+
     def set_outputs(self, verbose: bool = False, format: str = "vcf") -> None:
         """
         Defines the expected file(s).
@@ -101,9 +109,9 @@ class Genome:
                 _extension = "g.vcf.gz"
             else:
                 _extension = "vcf.gz"
-            
+
             _output = self._sample_dir / f"{self._sample_id}.{_extension}"
-            
+
         elif "cue" in self._model_type.lower():
             _extension = "vcf"
             _output = self._reports_dir / f"svs.{_extension}"
@@ -128,12 +136,12 @@ class Genome:
             #     and self.pipeline_inputs.cl_inputs.args.check_outputs
             # ):
             #     return
-            
+
             if verbose or self.pipeline_inputs.cl_inputs.debug_mode:
                 self.pipeline_inputs.cl_inputs.logger.debug(
                     f"{self._log_msg} - [run_{self._model_type}]: found the default {_extension.upper()} file | '{_default_output.file_name}'"
                 )
-        
+
         # Uncomment for per-chr parallelization
         # elif (
         #         self.pipeline_inputs.cl_inputs.args.per_chr
@@ -146,7 +154,7 @@ class Genome:
             self.pipeline_inputs.cl_inputs.logger.info(
                 f"{self._log_msg} - [run_{self._model_type}]: missing the default {_extension.upper()} file | '{_default_output.file_name}'"
             )
-        
+
         # Add the variant-caller-specific default output File()
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self.pipeline_inputs.variant_callers[self._model_type],
@@ -155,7 +163,7 @@ class Genome:
             replace_value=True,
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]"
         )
-    
+
     def get_sample_info(self) -> None:
         """
         Print info about the current genome.
@@ -164,14 +172,14 @@ class Genome:
             self.pipeline_inputs.cl_inputs.logger.info(
                 f"{self._log_msg}: sample_id='{self._sample_id}' | raw_data='{self._reads_path}'"
             )
-        
+
         # Uncomment to enable DeepTrio
         # else:
         #     self.parents = [x for x in self.trio_order if x != self._sample_id]
         #     self.pipeline_inputs.cl_inputs.logger.info(
         #         f"{self._log_msg}: child_id='{self._sample_id}' | parent_ids={self.parents}"
         #     )
-    
+
     def set_paths(self) -> None:
         """
         Define paths to frequently used directories.
@@ -187,14 +195,14 @@ class Genome:
                 )
             else:
                 self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
-            
+
             # Define output path structure
             self._sample_dir = self._results_dir / self._sample_id
             self._job_dir = self._sample_dir / "jobs"
             self._log_dir = self._sample_dir / "logs"
             self._tmp_dir = self._sample_dir / "tmp"
-            
-            # Uncomment to enable per-chr parallelization 
+
+            # Uncomment to enable per-chr parallelization
             # if (
             #     "per_chr" in self.pipeline_inputs.cl_inputs.args
             #     and self.pipeline_inputs.cl_inputs.args.per_chr
@@ -204,14 +212,14 @@ class Genome:
             #     self._reports_dir = self._input_dir / "reports"
             #     self._tmp_dir = self._input_dir / "tmp"
             #     self._scratch_dir = self._input_dir / "scratch"
-            
+
             # Ensure output path structure exists
             self.pipeline_inputs.cl_inputs.create_a_dir(self._results_dir, updated_log_msg=self._log_msg)
             self.pipeline_inputs.cl_inputs.create_a_dir(self._sample_dir, updated_log_msg=self._log_msg)
             self.pipeline_inputs.cl_inputs.create_a_dir(self._job_dir, updated_log_msg=self._log_msg)
             self.pipeline_inputs.cl_inputs.create_a_dir(self._log_dir, updated_log_msg=self._log_msg)
             self.pipeline_inputs.cl_inputs.create_a_dir(self._tmp_dir, updated_log_msg=self._log_msg)
-            
+
             if self._model_type == "Cue":
                 self._reports_dir = self._sample_dir / "reports"
                 self.pipeline_inputs.cl_inputs.create_a_dir(self._reports_dir, updated_log_msg=self._log_msg)
@@ -219,15 +227,15 @@ class Genome:
                 self._pop_vcf = TestFile(
                     file=Path(self.pipeline_inputs.cl_inputs.args.pop_file).resolve(),
                     logger=self.pipeline_inputs.cl_inputs.logger)
-            
+
                 self._pop_vcf.check_existing()
-            
+
                 if not self._pop_vcf.file_exists:
                     self.pipeline_inputs.cl_inputs.logger.info(
                         f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease update --allele-freq to include an existing PopVCF.\nExiting now...",
                     )
                     exit(1)
-    
+
     def setup_variables(self) -> None:
         """
         Establish a model-specific list of variables saved as nested dictionaries.
@@ -240,9 +248,9 @@ class Genome:
             # replace_value=True,
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
             ) 
-        # --------------------------------------------------  
-        # Reference Genome 
-        # -------------------------------------------------- 
+        # --------------------------------------------------
+        # Reference Genome
+        # --------------------------------------------------
         # Add container binding path to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
@@ -250,7 +258,7 @@ class Genome:
             new_val=str(self.pipeline_inputs.cl_inputs.args.ref_file.parent),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-        
+
         # Add checkpoint prefix to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
@@ -258,10 +266,10 @@ class Genome:
             new_val=str(self.pipeline_inputs.cl_inputs.args.ref_file.name),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-        
-        # --------------------------------------------------  
+
+        # --------------------------------------------------
         # Reference Genome - default regions BED file
-        # -------------------------------------------------- 
+        # --------------------------------------------------
         # Add container binding path to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
@@ -276,8 +284,8 @@ class Genome:
             new_val=str(self.pipeline_inputs._default_BED_file.file_name),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-        
-        # -------------------------------------------------- 
+
+        # --------------------------------------------------
         # Model Checkpoint
         # --------------------------------------------------
         # Add container binding path to model-specific variables
@@ -294,10 +302,10 @@ class Genome:
             new_val=self.pipeline_inputs.variant_callers[self._model_type]["checkpoint_name"],
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-        
-        # --------------------------------------------------  
+
+        # --------------------------------------------------
         # Reads file (BAM or CRAM input)
-        # -------------------------------------------------- 
+        # --------------------------------------------------
         # Add container binding path to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
@@ -312,12 +320,12 @@ class Genome:
             new_val=str(self._reads_path.name),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-        
-        # -------------------------------------------------- 
+
+        # --------------------------------------------------
         # Output VCF (perhaps gVCF in the future)
-        # -------------------------------------------------- 
+        # --------------------------------------------------
         _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
-        
+
         # Add container binding path to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
@@ -332,10 +340,10 @@ class Genome:
             new_val=str(_default_output.path.name),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-        
-        # -------------------------------------------------- 
+
+        # --------------------------------------------------
         # Temp Directory
-        # -------------------------------------------------- 
+        # --------------------------------------------------
         # Add container binding path to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
@@ -343,8 +351,8 @@ class Genome:
             new_val=str(self._tmp_dir),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
-         
-        # -------------------------------------------------- 
+
+        # --------------------------------------------------
         # Population VCF -- no genotypes (DeepVariant Only)
         # --------------------------------------------------
         if self._model_type == "DeepVariant":
@@ -362,44 +370,44 @@ class Genome:
                 new_val=self._pop_vcf.path.name,
                 updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
             )
-    
+
     def init_genome(self) -> None:
         """
         Setup a 'Genome()' object.
         """
         self.get_sample_info()
-        
+
         if len(self.pipeline_inputs.variant_callers.keys()) == 1:
             self._model_type = list(self.pipeline_inputs.variant_callers.keys())[0]
-            
+
             self.set_paths()
-                        
+
             if self._sample_id is not None:
                 self.set_outputs(verbose=True)
-                
+
                 # Uncomment to use g.vcfs (with DeepVariant only)
                 # self.set_outputs(verbose=True, format="g.vcf")
-                
+
                 _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
 
                 # self._outputs = PostProcessVCF(genome=self)
                 # self._outputs.check_all_outputs(group_name=self.group_name, verbose=True)
-            
+
                 if (
                     _default_output.file_exists is False
                     # self._missing_output
                     # or self._outputs._missing_any_outputs
                     or self.pipeline_inputs.cl_inputs.overwrite
                     ):
-                        if "deepvariant" in self._model_type.lower():
-                            self.setup_variables()
-                        
-                        # Uncomment for happy, or per-chr parallelization
-                        # self.create_extra_dirs()
-                        
-                        if "cue" in self._model_type.lower() and self._region is None:
-                            self.add_symlinks()
-                        return
+                    if "deepvariant" in self._model_type.lower():
+                        self.setup_variables()
+
+                    # Uncomment for happy, or per-chr parallelization
+                    # self.create_extra_dirs()
+
+                    if "cue" in self._model_type.lower() and self._region is None:
+                        self.add_symlinks()
+                    return
                 else:
                     print("ALL OUTPUTS DETECTED!")
                     breakpoint()
@@ -410,7 +418,7 @@ class Genome:
         else:
             print("EDIT TO ENABLE MULTIPLE VARIANT CALLERS")
             breakpoint()
-    
+
     def check_pickle(self, input: File) -> None:
         """
         Confirms if a Genome() object was successfully pickled.
@@ -432,18 +440,18 @@ class Genome:
                 raise FileNotFoundError(
                     f"missing required file | '{self._pickle_file.file_name}'"
                 )
-    
+
     def init_science(self, get_help: bool = False) -> None:
         """
         Setup the executable lines of science within an SBATCH.
         """
         self._science = Science(genome=self)
-        
+
         # Uncomment to enable per-chrom optimization
         # self._science = Science(genome=self, chr_name=self._chrom)
-        
+
         self._science.build_job_name()
-        
+
         _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
 
         if (
@@ -451,14 +459,14 @@ class Genome:
             or self._science._job_file.file_exists is False # missing an existing SBATCH
             or self.pipeline_inputs.cl_inputs.overwrite # intending to re-write the SBATCH file
             ):
-        
+
             if "deepvariant" in self._model_type.lower():
                 if get_help:
                     self._science.get_help()
                     exit(0)
                 else:
                     self._science.build_deepvariant_cmd()
-                
+
                 # Review the newly created BASH command(s)
                 if self.pipeline_inputs.cl_inputs.debug_mode:
                     self.pipeline_inputs.cl_inputs.logger.debug(
@@ -469,7 +477,7 @@ class Genome:
                     self.pipeline_inputs.cl_inputs.logger.debug(
                         f"{self._log_msg}: ----------------------------------------------------")
                     breakpoint()
-            
+
             # Uncomment to use Cue
             # if "cue" in self._model_type.lower():
             #     self._science.build_cue_cmd()
@@ -480,7 +488,7 @@ class Genome:
         else:
             self.pipeline_inputs.cl_inputs.logger.warning(
                 f"{self._log_msg}: --overwrite=False, skipping variant caller command building | '{self._science._job_file.path}'")
-    
+
     def init_job(self) -> None:
         """
         Setup the SBATCH headers, and combine with content from init_science().
@@ -491,12 +499,12 @@ class Genome:
             job_file=self._science._job_file,
             log_dir=self._log_dir,
             )
-        
+
         # Uncomment to by-pass defining variant calling as mandatory
         # self._slurm_job.create_slurm_job()
-        
+
         self._slurm_job.create_slurm_job(handler_status_label=f"variant_calling:{self._model_type}")
-        
+
         # Actually generate the SBATCH file, or pretend to
         if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
             self._slurm_job.display_job()
@@ -505,7 +513,7 @@ class Genome:
             self._slurm_job.write_job()
         else:
             self._slurm_job.write_job()    
-        
+
     def submit_job(
         self,
         prior_jobs: Union[List[Union[str, None]], None] = None
@@ -513,13 +521,13 @@ class Genome:
         """
         Pass a SBATCH job to the SLURM queue.
         """
-        
+
         _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
-        
+
         if not self.pipeline_inputs.cl_inputs.dry_run_mode:
             # confirm an SBATCH file actually exists
             self._science._job_file.check_status()
-        
+
         if (
             _default_output.file_exists is False
             and self._science._job_file.file_exists
@@ -527,11 +535,11 @@ class Genome:
             _default_output.file_exists 
             and self.pipeline_inputs.cl_inputs.overwrite  
         ):
-        
+
             _submit = SubmitSBATCH(
                 job_file=self._slurm_job.job_file,
                 )
-            
+
             if prior_jobs is not None:
                 _submit.build_submission_command(
                     prior_jobs=prior_jobs,
@@ -541,17 +549,17 @@ class Genome:
                 _submit.get_status()
             else:
                 _submit.send_to_queue()
-            
+
             return _submit._job_id
         else:
             print("NO SLURM JOB WILL BE SUBMITTED")
             print("OUTPUT FILE EXISTS:", _default_output.file_exists)
             print("JOB FILE EXISTS:", self._science._job_file.file_exists)
-        
+
             print("ANY LINES CREATED?", self._science._n_lines is not None)
             print("OVERWRITE?", self.pipeline_inputs.cl_inputs.overwrite)
             # breakpoint()
-     
+
     # def update_logging(self) -> None:
     #     if self._reads_path is None:
     #         self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg} - [{self._sample_num}-of-{self.pipeline_inputs._total_num_genomes} trios]"
@@ -560,17 +568,17 @@ class Genome:
 
     # def create_extra_dirs(self) -> None:
     #     """ """
-        # Uncomment for hap.py
-        # self.pipeline_inputs.cl_inputs.create_a_dir(self._scratch_dir)
-        
-        # Uncomment for per-chr parallelization
-        # if (
-        #     "per_chr" in self.pipeline_inputs.cl_inputs.args
-        #     and self.pipeline_inputs.cl_inputs.args.per_chr
-        #     and self._region is not None
-        # ):
-        #     self.pipeline_inputs.cl_inputs.create_a_dir(self._input_dir)
-    
+    # Uncomment for hap.py
+    # self.pipeline_inputs.cl_inputs.create_a_dir(self._scratch_dir)
+
+    # Uncomment for per-chr parallelization
+    # if (
+    #     "per_chr" in self.pipeline_inputs.cl_inputs.args
+    #     and self.pipeline_inputs.cl_inputs.args.per_chr
+    #     and self._region is not None
+    # ):
+    #     self.pipeline_inputs.cl_inputs.create_a_dir(self._input_dir)
+
     # Uncomment for Cue
     # def add_symlinks(self) -> None:
     #     """
@@ -608,7 +616,7 @@ class Genome:
     #             f"{self._log_msg}: missing the {file_type} index file | '{_bam_index_file}'\nExiting..."
     #         )
     #         exit(1)
-    
+
     # Uncomment for Cue
     # def create_sym_link(self, input: Path, output: Path) -> None:
     #     """
@@ -632,7 +640,6 @@ class Genome:
     #                 output.unlink()
     #             output.symlink_to(input)
 
-    
     # def save_new_inputs(self) -> None:
     #     """
     #     Saves bam_path' from an input CSV and writes to a new input CSV for re-running difficult samples.
