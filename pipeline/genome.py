@@ -505,7 +505,7 @@ class Genome:
 
         self._slurm_job.create_slurm_job(handler_status_label=f"variant_calling:{self._model_type}")
 
-        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        # _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
         # print("DEFAULT OUTPUT:", _default_output.path)
 
         # print("PICKLE FILE:", self._pickle_file.path) 
@@ -513,23 +513,25 @@ class Genome:
         # # print("PICKLE FILE:", self.pipeline_inputs._samples_pickle.path)
         # breakpoint()
 
-        # Create a sample-stats CSV file
-        self._slurm_job.create_slurm_job(
-            handler_status_label=f"get_stats:{self._model_type}",
-            content_list=[f"bash scripts/get_stats.sh {_default_output.path}"],
-        )
+        #### NOTE: These can not follow run_deepvariant with a capture_status 
+        ####        opted to run separately to ensure benchmarking reflects only the Variant Calling component
+        # # Create a sample-stats CSV file
+        # self._slurm_job.create_slurm_job(
+        #     handler_status_label=f"get_stats:{self._model_type}",
+        #     content_list=[f"bash scripts/get_stats.sh {_default_output.path}"],
+        # )
 
-        # Remove temporary files
-        if self._pickle_file.path.is_file() or self.pipeline_inputs.cl_inputs.dry_run_mode:
-            self._slurm_job.create_slurm_job(
-                handler_status_label=f"archive:{self._model_type}",
-                content_list=[f"python3 archive.py -I {self._pickle_file.path}"],
-            )
+        # # Remove temporary files
+        # if self._pickle_file.path.is_file() or self.pipeline_inputs.cl_inputs.dry_run_mode:
+        #     self._slurm_job.create_slurm_job(
+        #         handler_status_label=f"archive:{self._model_type}",
+        #         content_list=[f"python3 archive.py -I {self._pickle_file.path}"],
+        #     )
 
-        # Add a final line at the end of the SBATCH
-        self._slurm_job.create_slurm_job(
-            content_list=["echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science ends now.'"]
-        )
+        # # Add a final line at the end of the SBATCH
+        # self._slurm_job.create_slurm_job(
+        #     content_list=["echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science ends now.'"]
+        # )
 
         # Actually generate the SBATCH file, or pretend to
         if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
