@@ -38,24 +38,18 @@ class Pipeline:
     # _rerun_counter: int = field(default=0, repr=False, init=False)
     # _samples_file: Union[None, str] = field(default=None, init=False, repr=False)
 
-    def subdivide_group(self, current_index: int, subset_size: int) -> bool:
+    def subdivide_group(self, current_iter: int, subset_size: int) -> bool:
         """
         Controls when to provide logging updates during large variant calling cohorts given to an iterative loop within process_cohort() .
 
-        Parameters
-        ----------
-        current_index : int
-            represents the current place within a group of samples
-        subset_size : int
-            defines where to create breaks within the iterator
+        Args:
+            current_iter (int): 1-based value; the current place within a group of samples.
+            subset_size (int): defines where to create breaks within the iterator
 
-        Returns
-        -------
-        bool
-            True: when both numbers evenly divide
-            False: when they do not evenly divide
+        Returns:
+            bool: if True, both numbers evenly divide
         """
-        if current_index % subset_size == 0:
+        if current_iter % subset_size == 0:
             return True
         else:
             return False
@@ -98,15 +92,23 @@ class Pipeline:
         # Enable users to start & end the cohort intentionally
         if self.pipeline_inputs.cl_inputs.args.submit_start:
             self._starting_row = self.pipeline_inputs.cl_inputs.args.submit_start - 1
-
-        if self.pipeline_inputs.cl_inputs.dry_run_mode:
-            self._submit_size = 1
         else:
-            self._submit_size = self.pipeline_inputs.cl_inputs.args.submit_size
+            self._starting_row = 0
+
+        if self.pipeline_inputs.cl_inputs.debug_mode:
+            self._ending_row = self._starting_row + 1
+        else:
+            self._ending_row = self.pipeline_inputs._total_num_genomes
+
+        if self._ending_row < self._starting_row:
+            self.pipeline_inputs.cl_inputs.logger.error(
+                f"{self.pipeline_inputs.cl_inputs.logger_msg}: the value for ending_row must be greater than or equal to '{self._starting_row:,}'.\nExiting... "
+            )
+            exit(1)
 
         # How many times will variant calling be performed per-sample?
         _n_variant_callers = len(self.pipeline_inputs.variant_callers.keys())
-        
+
         # NOTE: This only works for DeepVariant currently!
         _total_jobs = (_n_variant_callers * self.pipeline_inputs._total_num_genomes)
         self._job_ids = [None] * _total_jobs
@@ -207,8 +209,8 @@ class Pipeline:
             # After submitting variant calling for all model types,
             # determine if reporting a status update
             halt_loop = self.subdivide_group(
-                current_index=i,
-                subset_size=self._submit_size,
+                current_iter=(i+1),
+                subset_size=self.submit_size,
                 )
 
             if halt_loop:
@@ -224,26 +226,59 @@ class Pipeline:
                 #     self.pipeline_inputs.cl_inputs.logger.info(
                 #         f"{self.pipeline_inputs.cl_inputs.logger_msg}: number of samples to re-run with CUE | {self._resubmission_counter}"
                 #     )
+                
+                
+                # print("I:", i)
+                # print("ITER:", (i+1))
+                # print("JOB IDS:", self._job_ids)
+                # print("SUBMIT SIZE:", self.submit_size)
 
                 if self._job_ids:
 
-                    _end = i + self.submit_size
-                    _current_job_ids = self._job_ids[i:_end]
+                    # print("SUBMIT START:", self.pipeline_inputs.cl_inputs.args.submit_start)
+                    # print("STARTING ROW:", self._starting_row)
+
+                    # print("TOTAL GENOMES:", self.pipeline_inputs._total_num_genomes)
+                    # print("ENDING ROW:", self._ending_row)
+
+                    if (i+1) == self.pipeline_inputs._total_num_genomes:
+
+                        if self.pipeline_inputs.cl_inputs.args.submit_size > 1:
+                            total = (
+                                self._skip_counter + self._submitted_counter
+                            )  # + self._rerun_counter
+                            # print("TOTAL:", total)
+                            # print("LOOK OVER HERE!")
+                            start = total - self.submit_size
+                            _current_job_ids = self._job_ids[start : (i + 1)]
+                            # print("START:", start)
+                            pass
+                        else:
+                            # print("OVER HERE!")
+                            _end = i + self.submit_size
+                            # print("END:", _end)
+                            _current_job_ids = self._job_ids[i:_end]
+                    else: 
+                        # print("NOPE, OVER HERE!")
+                        _current_job_ids = self._job_ids[self._starting_row:(i+1)]
+                    # print("CURRENT JOB IDS:", _current_job_ids)
+                    # breakpoint()
 
                     # Confirm that the submit size worked
                     self.pipeline_inputs.check_submission(
-                        slurm_job_ids=_current_job_ids, n_expected=(self._submit_size * _n_variant_callers)
+                        slurm_job_ids=_current_job_ids, n_expected=(self.submit_size * _n_variant_callers)
                     )
 
-                    self.pipeline_inputs.cl_inputs.logger.info(
-                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: subset_size={self._submit_size}; SBATCH job ids for current samples | {_current_job_ids}"
-                    )
+                    if (i+1) < self.pipeline_inputs._total_num_genomes:
+                        self.pipeline_inputs.cl_inputs.logger.info(
+                            f"{self.pipeline_inputs.cl_inputs.logger_msg}: submit_size={self.submit_size}; SBATCH job ids for current samples | {_current_job_ids}"
+                        )
 
-                    self.pipeline_inputs.cl_inputs.logger.info(
-                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: iteration={_end}; waiting for you to press (c) to continue..."
-                    )
-                    print("----------------------------------------------------------------")
-                    breakpoint()
+                        self.pipeline_inputs.cl_inputs.logger.info(
+                            f"{self.pipeline_inputs.cl_inputs.logger_msg}: iteration={(i+1)}; waiting for you to press (c) to continue..."
+                        )
+                        print("----------------------------------------------------------------")
+                        breakpoint()
 
         if self._skip_counter == _total_jobs:
             self.pipeline_inputs.cl_inputs.logger.info(

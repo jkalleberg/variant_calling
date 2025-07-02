@@ -136,8 +136,8 @@ def __init__() -> None:
             "--dry-run",
             # "--debug",
             "--overwrite",
-            "--submit-start",
-            "2",
+            # "--submit-start",
+            # "2",
             # "--submit-size",
             # "2",
             
@@ -387,7 +387,8 @@ def __init__() -> None:
     _cl_inputs.create_logging_msg()
 
     # Begin to iterate through all the samples
-    _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs)
+    _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs,
+                                 submit_size=_cl_inputs.args.submit_size)
 
     # produce the manual for DeepVariant
     if _cl_inputs.args.get_help:
