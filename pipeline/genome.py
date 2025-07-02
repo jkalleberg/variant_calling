@@ -123,32 +123,37 @@ class Genome:
         else:
             _default_output.check_status()
 
-        if _default_output.file_exists:
-            # Uncomment if adding the "check_outputs" flag
-            # # If only "checking outputs", skip the remaining steps
-            # if (
-            #     "check_outputs" in self.pipeline_inputs.cl_inputs.args
-            #     and self.pipeline_inputs.cl_inputs.args.check_outputs
-            # ):
-            #     return
+        if self.pipeline_inputs.cl_inputs.args.get_help is False:
+            if _default_output.file_exists:
+                # Uncomment if adding the "check_outputs" flag
+                # # If only "checking outputs", skip the remaining steps
+                # if (
+                #     "check_outputs" in self.pipeline_inputs.cl_inputs.args
+                #     and self.pipeline_inputs.cl_inputs.args.check_outputs
+                # ):
+                #     return
 
-            if verbose or self.pipeline_inputs.cl_inputs.debug_mode:
-                self.pipeline_inputs.cl_inputs.logger.debug(
-                    f"{self._log_msg} - [run_{self._model_type}]: found the default {_extension.upper()} file | '{_default_output.file_name}'"
+                if verbose:
+                    self.pipeline_inputs.cl_inputs.logger.info(
+                        f"{self._log_msg} - [run_{self._model_type}]: found the default {_extension.upper()} file | '{_default_output.file_name}'"
+                    )
+                elif self.pipeline_inputs.cl_inputs.debug_mode:
+                    self.pipeline_inputs.cl_inputs.logger.debug(
+                        f"{self._log_msg} - [run_{self._model_type}]: found the default {_extension.upper()} file | '{_default_output.file_name}'"
+                    )
+
+            # Uncomment for per-chr parallelization
+            # elif (
+            #         self.pipeline_inputs.cl_inputs.args.per_chr
+            #         and len(self._paths_found) == self._num_chrs
+            #     ):
+            #         self.pipeline_inputs.cl_inputs.logger.info(
+            #             f"{self._log_msg}: missing the 'bcftools concat' output file | '{_default_output.file_name}'"
+            #         )
+            else:
+                self.pipeline_inputs.cl_inputs.logger.info(
+                    f"{self._log_msg} - [run_{self._model_type}]: missing the default {_extension.upper()} file | '{_default_output.file_name}'"
                 )
-
-        # Uncomment for per-chr parallelization
-        # elif (
-        #         self.pipeline_inputs.cl_inputs.args.per_chr
-        #         and len(self._paths_found) == self._num_chrs
-        #     ):
-        #         self.pipeline_inputs.cl_inputs.logger.info(
-        #             f"{self._log_msg}: missing the 'bcftools concat' output file | '{_default_output.file_name}'"
-        #         )
-        else:
-            self.pipeline_inputs.cl_inputs.logger.info(
-                f"{self._log_msg} - [run_{self._model_type}]: missing the default {_extension.upper()} file | '{_default_output.file_name}'"
-            )
 
         # Add the variant-caller-specific default output File()
         self.pipeline_inputs.cl_inputs.add_to_dict(
@@ -370,7 +375,7 @@ class Genome:
     def init_genome(self) -> None:
         """
         Setup a 'Genome()' object.
-        """
+        """        
         self.get_sample_info()
 
         if len(self.pipeline_inputs.variant_callers.keys()) == 1:

@@ -115,7 +115,7 @@ class CustomModule:
             action="version",
             version="%(prog)s version 0.1",
             help="show program's version number and exit",
-    )
+        )
 
     def collect_args(self, manual_args: Union[List[str], None] = None) -> None:
         """
