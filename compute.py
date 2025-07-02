@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """
-description: after run.py, ensure large temp files are wiped after successful variant calling with the custom DeepVariant checkpoint.
+description: after run.py, report the resource usage after variant calling.
 
-usage: python3 archive.py                 \
+usage: python3 compute.py                 \
         -I ../CATTLE_TEST/1051/1051.pkl   \
         --dry-run                         \
                     
@@ -19,64 +19,71 @@ from helpers.inputs import InputManager
 from helpers.files import File
 from pipeline.genome import Genome
 
-from pipeline.clean_temps import CleanUp
+from pipeline.benchmark import Benchmark
 
 
 def __init__() -> None:
-    archive = CustomModule(output_required=False)
-    archive.start_module()
+    _benchmark = CustomModule(output_required=False)
+    _benchmark.start_module()
 
     # Uncomment to force arg entry at command line
-    archive.collect_args()
+    # _benchmark.collect_args()
 
     # Edit for manually testing command line arguments
-    # archive.collect_args(
-    #     [
-    #         "-I",
-    #         "../CATTLE_TEST/1051/1051.pkl",
-    #         # "--dry-run",
-    #         # "--debug",
-    #         # "--overwrite",
-    #     ])
+    _benchmark.collect_args(
+        [
+            "-I",
+            "../CATTLE_TEST/384425/384425.pkl",
+            # "--dry-run",
+            # "--debug",
+            # "--overwrite",
+        ]
+    )
 
     try:
         # Check generic command-line flags
-        archive.check_args()
+        _benchmark.check_args()
 
     except AssertionError as error:
-        archive._logger.error(f"{error}.\nExiting... ")
+        _benchmark._logger.error(f"{error}.\nExiting... ")
         exit(1)
 
     # Initialize all command line inputs
-    archive.process_args()
+    _benchmark.process_args()
 
     # Handle command-line inputs needed
     _cl_inputs = InputManager(
-        args=archive._args,
-        logger=archive._logger,
-        phase="archive",
+        args=_benchmark._args,
+        logger=_benchmark._logger,
+        phase="benchmark",
     )
     _cl_inputs.update_mode()
     _cl_inputs.create_logging_msg()
 
     # INPUT PATH: Determine if a directory name was given as output, when it should be a directory
-    if archive._input_path.stem != archive._input_path.name:
+    if _benchmark._input_path.stem != _benchmark._input_path.name:
         # Confirm input is an existing file
-        if archive._input_path.is_file():
+        if _benchmark._input_path.is_file():
             if _cl_inputs.debug_mode:
-                archive._logger.debug(f"{_cl_inputs.logger_msg}: valid --input; detected an existing file.")
-            _cl_inputs._input_path = archive._input_path
+                _benchmark._logger.debug(
+                    f"{_cl_inputs.logger_msg}: valid --input; detected an existing file."
+                )
+            _cl_inputs._input_path = _benchmark._input_path
         else:
-            archive._logger.error(f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {archive._input_path}\nExiting...")
+            _benchmark._logger.error(
+                f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {_benchmark._input_path}\nExiting..."
+            )
             exit(1)
     else:
         # TO DO: enable providing an input directory (e.g., samples + metadata together)?
-        archive._logger.error(f"invalid --input; expected a file, did you enter a directory? | {archive._input_path}\nExiting...")
+        _benchmark._logger.error(
+            f"invalid --input; expected a file, did you enter a directory? | {_benchmark._input_path}\nExiting..."
+        )
         exit(1)
 
     # Find the picked data for a specific sample
     _pickle_file = File(
-        path_to_file=archive._input_path,
+        path_to_file=_benchmark._input_path,
         cl_inputs=_cl_inputs,
     )
     _genome = _pickle_file.load_pickle()
@@ -92,7 +99,7 @@ def __init__() -> None:
         # For specific command-line args...
         for arg in _mode_args:
             # Determine if these args have been manually changed by the user
-            _current_value = vars(archive._args)[arg]
+            _current_value = vars(_benchmark._args)[arg]
             _previous_value = vars(_genome.pipeline_inputs.cl_inputs.args)[arg]
             if _previous_value != _current_value:
                 setattr(_genome.pipeline_inputs.cl_inputs.args, arg, _current_value)
@@ -103,21 +110,30 @@ def __init__() -> None:
         # Update the phase to reflect the current step
         _genome.pipeline_inputs.cl_inputs.phase = _cl_inputs.phase
         _genome.pipeline_inputs.cl_inputs.create_logging_msg()
-        _genome.pipeline_inputs.cl_inputs.logger = archive._logger
+        _genome.pipeline_inputs.cl_inputs.logger = _benchmark._logger
 
-        # Start the post-variant-calling clean up of temporary files
-        clean_files = CleanUp(genome=_genome)
+        # Start the post-variant-calling SBATCH resource usage benchmarking
+        benchmark_jobs = Benchmark(genome=_genome)
 
-        for k, vs in _genome.pipeline_inputs.variant_callers.items():    # print(f"KEY: {k}={vs}") 
+        for (
+            k,
+            vs,
+        ) in _genome.pipeline_inputs.variant_callers.items():  # print(f"KEY: {k}={vs}")
             _default_output = vs["default_output"]
-            clean_files.check_output(default_output=_default_output)
-            clean_files.remove_all_intermediates()
+
+            if _default_output.path.is_file():
+                print("DEFAULT OUTPUT EXISTS:")
+                benchmark_jobs.find_job_logs()
+                benchmark_jobs.process_resources(chunk_size=1)
+                breakpoint()
+            else:
+                print("MISSING DEFAULT OUTPUT")
 
     except AssertionError as error:
-        archive._logger.error(f"{error}.\nExiting... ")
+        _benchmark._logger.error(f"{error}.\nExiting... ")
         exit(1)
 
-    archive.end_module()
+    _benchmark.end_module()
 
 
 # Execute functions created

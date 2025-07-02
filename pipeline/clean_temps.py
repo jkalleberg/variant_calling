@@ -23,7 +23,7 @@ from helpers.cmd_line import CMD
 @dataclass
 class CleanUp:
     """
-    Provide descriptions of a SV VCF produced by Cue.
+    Remove any known intermediate files produced during single-sample variant calling.
     """
 
     # required parameters

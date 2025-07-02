@@ -172,7 +172,7 @@ def partial_match_case_insensitive(
         return matches_found
     else:
         return
-    
+
 # def check_file_case_insensitive(filename: Union[str, Path], expected_filename: str) -> Union[Path, None]:
 #     """
 #     Checks if a file exists, case-insensitively.
@@ -202,5 +202,3 @@ def iterdir_with_prefix(absolute_path: Union[str,Path], prefix: str, valid_suffi
     """
     directory = Path(absolute_path)
     return [directory / item for item in directory.iterdir() if (item.name.startswith(prefix) and item.is_file() and item.suffix.lower() in valid_suffixes)]
-
-
