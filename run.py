@@ -122,26 +122,27 @@ def __init__() -> None:
             "-O",
             "../CATTLE_TEST/",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
-            
             "-I",
-            # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK 
-            # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK 
+            # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK
+            # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK
             # "./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
             "./tutorial/data/250627_Sutovsky_samples.csv",
-             
             "--reference",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
             "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
             ### NO --allele-freq with default ckpt will break!
-            "--allele-freq", 
+            "--allele-freq",
             "../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
-            
             "--dry-run",
             # "--debug",
             "--overwrite",
-            # "--get-help",
+            "--submit-start",
+            "2",
+            # "--submit-size",
+            # "2",
             
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
+            # "--get-help",
             # "--resources",
             # "tutorial/data/resources.json",
             # "--modules",
@@ -149,7 +150,7 @@ def __init__() -> None:
             # "--unmapped-reads",
             # "NKLS",
             # "--model-prefix",
-            # "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_default/model.ckpt", 
+            # "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_default/model.ckpt",
         ]
     )
 

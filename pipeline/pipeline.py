@@ -95,17 +95,21 @@ class Pipeline:
         # if self.pipeline_inputs.cl_inputs.args.check_samples:
         #     self._previously_run_samples = [dep for dep in self.pipeline_inputs.cl_inputs.args.check_samples.split(",")]
 
-        # if self.pipeline_inputs.cl_inputs.args.chunk_start:
-        #     self._starting_row = self.pipeline_inputs.args.chunk_start - 1
-
-        print("SUBMIT START:", self.pipeline_inputs.cl_inputs.args.submit_start)
-        print("SUBMIT SIZE:", self.pipeline_inputs.cl_inputs.args.submit_size)
+        # Enable users to start & end the cohort intentionally
+        if self.pipeline_inputs.cl_inputs.args.submit_start:
+            self._starting_row = self.pipeline_inputs.cl_inputs.args.submit_start - 1
 
         if self.pipeline_inputs.cl_inputs.dry_run_mode:
             self._submit_size = 1
+        else:
+            self._submit_size = self.pipeline_inputs.cl_inputs.args.submit_size
 
         # How many times will variant calling be performed per-sample?
         _n_variant_callers = len(self.pipeline_inputs.variant_callers.keys())
+        
+        # NOTE: This only works for DeepVariant currently!
+        _total_jobs = (_n_variant_callers * self.pipeline_inputs._total_num_genomes)
+        self._job_ids = [None] * _total_jobs
 
         for i, g in enumerate(self.pipeline_inputs._all_genomes.items()):
             if i < self._starting_row:
@@ -151,7 +155,7 @@ class Pipeline:
                     self.pipeline_inputs.cl_inputs.logger.info(
                         f"{_updated_logger_msg}: found all outputs for sample '{_genome._sample_id}'... SKIPPING AHEAD"
                     )
-                    self._job_ids.insert(i, None)
+                    # self._job_ids.insert(i, None)
                     self._skip_counter += 1
 
                 # OUTPUT DOES NOT EXIST! OR USER WANTS TO RE-SUBMIT
@@ -191,9 +195,10 @@ class Pipeline:
                     #     self.process_genome()
 
                     if str(self._result).isnumeric() or self._result is None:
-                        self._job_ids.insert(i, self._result)
+                        self._job_ids[i] = self._result
                         self._submitted_counter += 1
                     else:
+                        self._job_ids[i] = None
                         self._skip_counter += 1
 
                     # Revert the logger message back to original
@@ -221,6 +226,7 @@ class Pipeline:
                 #     )
 
                 if self._job_ids:
+
                     _end = i + self.submit_size
                     _current_job_ids = self._job_ids[i:_end]
 
@@ -238,9 +244,6 @@ class Pipeline:
                     )
                     print("----------------------------------------------------------------")
                     breakpoint()
-
-        # NOTE: This only works for DeepVariant currently!
-        _total_jobs = (_n_variant_callers * self.pipeline_inputs._total_num_genomes)
 
         if self._skip_counter == _total_jobs:
             self.pipeline_inputs.cl_inputs.logger.info(
