@@ -384,10 +384,11 @@ class Genome:
             self.set_paths()
 
             if self._sample_id is not None:
-                self.set_outputs(verbose=True)
+                # Uncomment to use vcfs (with DeepVariant only)
+                # self.set_outputs(verbose=True)
 
                 # Uncomment to use g.vcfs (with DeepVariant only)
-                # self.set_outputs(verbose=True, format="g.vcf")
+                self.set_outputs(verbose=True, format="g.vcf")
 
                 _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
 
