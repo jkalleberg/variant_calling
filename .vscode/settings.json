@@ -4,6 +4,7 @@
         "chrs",
         "contig",
         "contigs",
+        "dataframe",
         "deeptrio",
         "deepvariant",
         "GATK",
