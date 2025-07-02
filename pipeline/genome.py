@@ -42,32 +42,27 @@ class Genome:
     # trio_order: List[str] = field(default_factory=list, init=True)
 
     # internal parameters
-    # _default_output: Union[None, "File"] = field(default=None, init=False, repr=False)
-    # _missing_output: bool = field(default=True, init=False, repr=False)
-    _model_type: Union[str, None] = field(default="DeepVariant", init=False, repr=False)
-    _reads_path: Union[Path, None] = field(default=None, init=False, repr=False)
-    _variables: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
-    _new_lines: List[str] = field(default_factory=list, init=False, repr=False)
-
     _job_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _log_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _model_type: Union[str, None] = field(default="DeepVariant", init=False, repr=False)
+    _new_lines: List[str] = field(default_factory=list, init=False, repr=False)
+    _pickle_file: Union[None, File] = field(default=None, init=False, repr=False)
+    _reads_dir: Union[Path, None] = field(default=None, init=False, repr=False)
     _reports_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _results_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _sample_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _scratch_dir: Union[None, Path] = field(default=None, init=False, repr=False)
+    _summary_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _tmp_dir: Union[None, Path] = field(default=None, init=False, repr=False)  
+    _variables: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
-    # _pickle_file: Union[None, File] = field(default=None, init=False, repr=False)
+    # _default_output: Union[None, "File"] = field(default=None, init=False, repr=False)
+    # _missing_output: bool = field(default=True, init=False, repr=False)
     # _check_dict: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     # # _chrom: Union[str, None] = field(default=None, init=False, repr=False)
     # _data_dict: Dict[str, Union[str, int, List[str]]] = field(
     #     default_factory=dict, init=False, repr=False
     # )
-    # _final_genome: bool = field(default=False, init=False, repr=False)
-    # _job_ids: List[Union[str, None]] = field(
-    #     default_factory=list, init=False, repr=False
-    # )
-    # _jobid_found: Union[List[bool], None] = field(default=None, init=False, repr=False)
 
     # _model_dict: Dict[str, Union[str, int, List[str]]] = field(
     #     default_factory=dict, init=False, repr=False
@@ -92,7 +87,7 @@ class Genome:
             print(f"INFO: {_info}")
             breakpoint()
         elif self.sample[1][1] is not None:
-            self._reads_path = Path(self.sample[1][1])
+            self._reads_dir = Path(self.sample[1][1])
             self._resources = self.pipeline_inputs.cl_inputs.resource_dict
             _info = "samples"
         else:
@@ -168,9 +163,9 @@ class Genome:
         """
         Print info about the current genome.
         """
-        if self._reads_path is not None:
+        if self._reads_dir is not None:
             self.pipeline_inputs.cl_inputs.logger.info(
-                f"{self._log_msg}: sample_id='{self._sample_id}' | raw_data='{self._reads_path}'"
+                f"{self._log_msg}: sample_id='{self._sample_id}' | raw_data='{self._reads_dir}'"
             )
 
         # Uncomment to enable DeepTrio
@@ -197,6 +192,7 @@ class Genome:
                 self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
 
             # Define output path structure
+            self._summary_dir = self._results_dir / "RESULTS"
             self._sample_dir = self._results_dir / self._sample_id
             self._job_dir = self._sample_dir / "jobs"
             self._log_dir = self._sample_dir / "logs"
@@ -310,14 +306,14 @@ class Genome:
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
             new_key="reads_path",
-            new_val=str(self._reads_path.parent),
+            new_val=str(self._reads_dir.parent),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
         # Add checkpoint prefix to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
             new_key="reads_name",
-            new_val=str(self._reads_path.name),
+            new_val=str(self._reads_dir.name),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
 
@@ -508,12 +504,12 @@ class Genome:
         # _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
         # print("DEFAULT OUTPUT:", _default_output.path)
 
-        # print("PICKLE FILE:", self._pickle_file.path) 
+        # print("PICKLE FILE:", self._pickle_file.path)
         # # self.pipeline_inputs.find_pickled_samples(expect_existing=True)
         # # print("PICKLE FILE:", self.pipeline_inputs._samples_pickle.path)
         # breakpoint()
 
-        #### NOTE: These can not follow run_deepvariant with a capture_status 
+        #### NOTE: These can not follow run_deepvariant with a capture_status
         ####        opted to run separately to ensure benchmarking reflects only the Variant Calling component
         # # Create a sample-stats CSV file
         # self._slurm_job.create_slurm_job(
@@ -589,7 +585,7 @@ class Genome:
             # breakpoint()
 
     # def update_logging(self) -> None:
-    #     if self._reads_path is None:
+    #     if self._reads_dir is None:
     #         self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg} - [{self._sample_num}-of-{self.pipeline_inputs._total_num_genomes} trios]"
     #     else:
     #         self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg} - [{self._sample_num}-of-{self.pipeline_inputs._total_num_genomes} samples]"
@@ -614,28 +610,28 @@ class Genome:
 
     #     Bypasses Cue's hard-coded behavior that writes per-chr input files within the same directory as the original BAM file, and instead write them to the sym link directory.
     #     """
-    #     if self._reads_path is None:
+    #     if self._reads_dir is None:
     #         return
 
-    #     if "bam" in Path(self._reads_path).suffix:
+    #     if "bam" in Path(self._reads_dir).suffix:
     #         file_type = "BAM"
     #         index = ".bai"
-    #     elif "cram" in Path(self._reads_path).suffix:
+    #     elif "cram" in Path(self._reads_dir).suffix:
     #         file_type = "CRAM"
     #         index = ".crai"
     #     else:
     #         self.pipeline_inputs.cl_inputs.logger.error(
-    #             f"{self._log_msg}: unexpected input file format... unable to determine appropriate file extension for the corresponding index file for | '{self._reads_path}'\nExiting..."
+    #             f"{self._log_msg}: unexpected input file format... unable to determine appropriate file extension for the corresponding index file for | '{self._reads_dir}'\nExiting..."
     #         )
     #         exit(1)
 
-    #     _reads_path = Path(self._reads_path)
-    #     _bam_index_file = Path(f"{self._reads_path}{index}")
+    #     _reads_dir = Path(self._reads_dir)
+    #     _bam_index_file = Path(f"{self._reads_dir}{index}")
 
     #     if _bam_index_file.is_file():
-    #         _bam_symlink_path = self._tmp_dir / _reads_path.name
-    #         self.create_sym_link(input=_reads_path, output=_bam_symlink_path)
-    #         self._reads_path = str(_bam_symlink_path)
+    #         _bam_symlink_path = self._tmp_dir / _reads_dir.name
+    #         self.create_sym_link(input=_reads_dir, output=_bam_symlink_path)
+    #         self._reads_dir = str(_bam_symlink_path)
 
     #         _index_symlink_path = self._tmp_dir / _bam_index_file.name
     #         self.create_sym_link(input=_bam_index_file, output=_index_symlink_path)
@@ -672,12 +668,12 @@ class Genome:
     #     """
     #     Saves bam_path' from an input CSV and writes to a new input CSV for re-running difficult samples.
     #     """
-    #     if self._reads_path is None:
+    #     if self._reads_dir is None:
     #         return
     #     add_to(
     #         update_dict=self._check_dict,  # type: ignore
     #         new_key="bam_path",
-    #         new_val=self._reads_path,
+    #         new_val=self._reads_dir,
     #         inputs=self.pipeline_inputs.cl_inputs,
     #     )
 
@@ -715,8 +711,8 @@ class Genome:
     #     """
     #     self._chrom = chrom
     #     # USE UPDATE_DICT()?
-    #     if self._reads_path is not None:
-    #         self._data_dict["bam"] = self._reads_path
+    #     if self._reads_dir is not None:
+    #         self._data_dict["bam"] = self._reads_dir
     #     self._data_dict["ref"] = str(self.iter.reference)
 
     #     if self._chrom is None:

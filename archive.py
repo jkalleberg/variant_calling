@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 """
-description: after run.py, ensure large temp files are wiped after successful variant calling with the custom DeepVariant checkpoint.
+description: after run.py, ensure large temp files are removed,
+             and report the SBATCH resource usage after variant calling.
 
 usage: python3 archive.py                 \
         -I ../CATTLE_TEST/1051/1051.pkl   \
         --dry-run                         \
-                    
 """
 
 from pathlib import Path
@@ -20,6 +20,7 @@ from helpers.files import File
 from pipeline.genome import Genome
 
 from pipeline.clean_temps import CleanUp
+from pipeline.benchmark import Benchmark
 
 
 def __init__() -> None:
@@ -27,17 +28,17 @@ def __init__() -> None:
     archive.start_module()
 
     # Uncomment to force arg entry at command line
-    archive.collect_args()
+    # archive.collect_args()
 
     # Edit for manually testing command line arguments
-    # archive.collect_args(
-    #     [
-    #         "-I",
-    #         "../CATTLE_TEST/1051/1051.pkl",
-    #         # "--dry-run",
+    archive.collect_args(
+        [
+            "-I",
+            "../CATTLE_TEST/1051/1051.pkl",
+            # "--dry-run",
     #         # "--debug",
     #         # "--overwrite",
-    #     ])
+        ])
 
     try:
         # Check generic command-line flags
@@ -108,10 +109,26 @@ def __init__() -> None:
         # Start the post-variant-calling clean up of temporary files
         clean_files = CleanUp(genome=_genome)
 
-        for k, vs in _genome.pipeline_inputs.variant_callers.items():    # print(f"KEY: {k}={vs}") 
-            _default_output = vs["default_output"]
+        # Start the post-variant-calling SBATCH resource usage benchmarking
+        benchmark_jobs = Benchmark(genome=_genome)
+
+        for model_type, variables in _genome.pipeline_inputs.variant_callers.items():   
+            # print(f"KEY: {model_type}={vars}") 
+            # breakpoint()
+            
+            _default_output = variables["default_output"]
             clean_files.check_output(default_output=_default_output)
             clean_files.remove_all_intermediates()
+
+            if _default_output.path.is_file():
+                benchmark_jobs.generate_intermediates()
+            else:
+                _model_info = f"{model_type} {variables["version"]} ({variables["checkpoint_name"]})"
+                archive._logger.warning(
+                    f"missing the a required default_output after variant calling | '{_model_info}'"
+                )
+
+        benchmark_jobs.generate_summary()
 
     except AssertionError as error:
         archive._logger.error(f"{error}.\nExiting... ")

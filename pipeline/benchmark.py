@@ -10,19 +10,22 @@ example:
 
 # Load python libs
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Union
 from regex import compile
 from sys import exit
 from subprocess import CalledProcessError
-# import pandas as pd
+import pandas as pd
 
-# from datetime import timedelta
+from datetime import timedelta
 
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from genome import Genome
     from helpers.files import File
+    from regex import compile
+    from helpers.cmd_line import CMD
+    from datetime import timedelta
 
 from helpers.files import File
 from helpers.cmd_line import CMD
@@ -37,21 +40,63 @@ class Benchmark:
     genome: "Genome"
 
     # internal, immutable values
+    _all_samples_file: Union[None, "File"] = field(default=None, init=False, repr=False)
+    _command_line: Union[None,"CMD"] = field(default=None, init=False, repr=False)
+    _digits_only: "compile" = compile(r"[-+]?(?:\d*\.*\d+)")
+    _group_name: Union[None, str] = field(default=None, init=False, repr=False)
     _jobs: Dict[str, List[str]] = field(default_factory=dict, init=False, repr=False)
-    _keep_decimal = compile(r"[^\d.]+")
-    _metrics_list_of_dicts: List[Dict[str, str]] = field(default_factory=list, init=False, repr=False)
+    _keep_decimal: "compile" = compile(r"[^\d.]+")
+    _metrics_data: pd.DataFrame = field(default_factory=pd.DataFrame, init=False, repr=False) 
+    _metrics_list: List[Dict[str, str]] = field(default_factory=list, init=False, repr=False)
     _n_jobs: int = field(default=0, init=False, repr=False)
     _resources_used: list = field(default_factory=list, init=False, repr=False)
     _total_hours: int = field(default=0, init=False, repr=False)
     _total_minutes: int = field(default=0, init=False, repr=False)
-    _total_seconds: int = field(default=0, init=False, repr=False) 
-
-    # _skipped_jobs: list = field(default_factory=list, init=False, repr=False)
+    _total_seconds: int = field(default=0, init=False, repr=False)
+    _sample_file: Union[None, "File"] = field(default=None, init=False, repr=False)
+    _skipped_jobs: List[str] = field(default_factory=list, init=False, repr=False)
+    _summary_data: pd.DataFrame = field(
+        default_factory=pd.DataFrame, init=False, repr=False
+    )
+    _summary_file: Union[None,"File"] = field(default=None, init=False, repr=False) 
     # _slurm_jobs: Dict = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._command_line = CMD(cl_inputs=self.genome.pipeline_inputs.cl_inputs)
-        self._digits_only = compile(r"[-+]?(?:\d*\.*\d+)")
+
+        # Define the single-sample output CSV file to be created
+        self._sample_file = File(
+            path_to_file=self.genome._sample_dir / "resources_used.csv",
+            cl_inputs=self.genome.pipeline_inputs.cl_inputs,
+        )
+        if self.genome.pipeline_inputs.cl_inputs.overwrite:
+            self._sample_file.check_status(should_file_exist=True)
+        else:
+            self._sample_file.check_status(should_file_exist=False)
+
+        # Define the multi-sample output CSV file to be created
+        if self.genome._summary_dir is None:
+            self.genome._summary_dir = self.genome._results_dir / "RESULTS"
+            self.genome._summary_dir.mkdir(exist_ok=True)
+        self._group_name = self.genome.pipeline_inputs.cl_inputs._input_path.stem
+        self._all_samples_file = File(
+            path_to_file=self.genome._summary_dir / f"{self._group_name}.resources_used.csv",
+            cl_inputs=self.genome.pipeline_inputs.cl_inputs,
+        )
+        if self.genome.pipeline_inputs.cl_inputs.overwrite:
+            self._all_samples_file.check_status(should_file_exist=True)
+        else:
+            self._all_samples_file.check_status(should_file_exist=False)
+
+        # Define the multi-sample output CSV that reports benchmarking stats
+        self._summary_file = File(
+            path_to_file=self.genome._summary_dir / f"{self._group_name}.resources_stats.csv",
+            cl_inputs=self.genome.pipeline_inputs.cl_inputs,
+        )
+        if self.genome.pipeline_inputs.cl_inputs.overwrite:
+            self._summary_file.check_status(should_file_exist=True)
+        else:
+            self._summary_file.check_status(should_file_exist=False)
 
     def find_job_logs(self) -> None:
         """
@@ -129,7 +174,6 @@ class Benchmark:
         """
         Iterate through a list of job ids, and use 'sacct' to calculate resources used per COMPLETED job.
         """
-
         for sample, jobs_info in self._jobs.items():
             # print("SAMPLE:", sample)
             for job_type, jobs in jobs_info.items():
@@ -148,6 +192,12 @@ class Benchmark:
                         # parsable with '|' but don't include a trailing '|'
                         # Run the BCFtools command as a sub-process
                         _sacct_cmd = ["sacct", f"-j{job_id}", "--state=COMPLETED", "--format=JobID,JobName%50,State,ExitCode,Elapsed,Alloc,CPUTime,MaxRSS,MaxVMSize", "--units=G", "--parsable2",]
+
+                        # Ensure that command is executed even if in dry_run_mode
+                        # BUT DO NOT TURN OFF FOR OTHER INSTANCES OF CL_INPUTS
+                        if self._command_line.cl_inputs.dry_run_mode is True:
+                            self._command_line.cl_inputs.dry_run_mode = False
+
                         _result = self._command_line.execute(
                             command_list=_sacct_cmd,
                             type="sacct",
@@ -231,193 +281,315 @@ class Benchmark:
 
                     # save clean data to a dictionary
                     d = dict(zip(metric_names, _resources_used))
-                    self._metrics_list_of_dicts.append(d)
-
-                    # self.column_names = list(metric_names)
+                    self._metrics_list.append(d)
 
                     if _itr % chunk_size == 0:
                         self._core_hours_str = f"{int(self._total_days):,}-{int(remainder_h):,}:{int(self._total_minutes)}:{self._total_seconds}"
                         self.genome.pipeline_inputs.cl_inputs.logger.info(
-                            f"running total CORE HOURS after {_itr:,}-of-{int(self._n_jobs):,} jobs | ~{int(self._total_hours):,} CPU hours ({self._core_hours_str})"
+                            f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: running total CORE HOURS after {_itr:,}-of-{int(self._n_jobs):,} jobs | ~{int(self._total_hours):,} CPU hours ({self._core_hours_str})"
                         )
                         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-                            self.genome.pipeline_inputs.cl_inputs.logger.debug(f"row{_itr:,} = {d}")
+                            self.genome.pipeline_inputs.cl_inputs.logger.debug(
+                                f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: row{_itr:,} = {d}"
+                            )
 
-    # def get_timedelta(self, total_seconds: int) -> timedelta:
-    #     """
-    #     Convert number of seconds into a timedelta format.
-    #     """
-    #     return timedelta(seconds=total_seconds)
+        # convert list of dicts obj to Pandas dataframe
+        self._metrics_data = pd.DataFrame.from_records(
+            self._metrics_list, columns=list(metric_names)
+        )
 
-    # def get_timedelta_str(self, tdelta) -> str:
-    #     """
-    #     Re-formats a '0 days 00:00:00' timedelta object back into a '0-00:00:00' from SLURM. Used internally by summary() only.
-    #     """
-    #     d = {"days": tdelta.days}
-    #     d["hours"], remainder = divmod(tdelta.seconds, 3600)
-    #     d["minutes"], d["seconds"] = divmod(remainder, 60)
-    #     for key, value in d.items():
-    #         if key != "days":
-    #             d[key] = str(value).zfill(2)
-    #     return f'{d["days"]}-{d["hours"]}:{d["minutes"]}:{d["seconds"]}'
+        # Exclude metrics for non-replicate jobs
+        self._metrics_data.drop_duplicates(subset=["JobName"], inplace=True)
 
-    # def str_mem(self, mem: float) -> str:
-    #     """
-    #     Re-formats a float memory used back to '00.00G' string.
-    #     Used internally by process_resources() and summary().
-    #     """
-    #     mem_string = f"{round(mem,2)}G"
-    #     return mem_string
-
-    # def summary(self) -> None:
-    #     """
-    #     Calculate summary stats about resourced used for each phase.
-    #     """
-    #     # convert dict obj to dataframe
-    #     df = pd.DataFrame.from_records(
-    #         self._metrics_list_of_dicts, columns=self.column_names
-    #     )
-
-    #     # Ensure you only average usage across non-replicate jobs
-    #     df = df.drop_duplicates(subset=["JobName"])
-
-    #     df.insert(
-    #         loc=6,
-    #         column="Elapsed_seconds",
-    #         value=df[["Elapsed"]].applymap(self.get_sec),
-    #     )
-
-    #     # Convert to str to timedelta obj for descriptive stats
-    #     df.insert(
-    #         loc=7,
-    #         column="Elapsed_Time",
-    #         value=df[["Elapsed_seconds"]].applymap(self.get_timedelta),
-    #     )
-
-    #     # Convert to str to float obj for descriptive stats
-    #     df[["MaxRSS_G", "MaxVMSize_G"]] = df[["MaxRSS_G", "MaxVMSize_G"]].apply(
-    #         pd.to_numeric
-    #     )
-
-    #     if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-    #         self.genome.pipeline_inputs.cl_inputs.logger.debug(f"accounting output for all jobs |'")
-    #         print(
-    #             "---------------------------------------------------------------------------------------------------------------------------------------"
-    #         )
-    #         print(df)
-    #         print(
-    #             "---------------------------------------------------------------------------------------------------------------------------------------"
-    #         )
-
-    #     # handle elapsed wall time
-    #     duration_summary = pd.DataFrame(
-    #         df.groupby("phase").Elapsed_Time.describe(datetime_is_numeric=False)[
-    #             ["count", "mean", "max"]
-    #         ]
-    #     )
-    #     duration_summary[["mean", "max"]] = duration_summary[
-    #         ["mean", "max"]
-    #     ].applymap(self.get_timedelta_str)
-
-    #     duration_summary.reindex(self.indexes)
-
-    #     if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-    #         self.genome.pipeline_inputs.cl_inputs.logger.debug(
-    #             f"Duration\n---------------------------------------------\n{duration_summary}\n---------------------------------------------",
-    #         )
-
-    #     # handle REAL memory usage
-    #     real_mem_summary = pd.DataFrame(
-    #         df.groupby("phase").MaxRSS_G.describe()[["count", "mean", "max"]]
-    #     )
-
-    #     real_mem_summary[["mean", "max"]] = real_mem_summary[["mean", "max"]].applymap(
-    #         self.str_mem
-    #     )
-    #     real_mem_summary.reindex(self.indexes)
-
-    #     if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-    #         self.genome.pipeline_inputs.cl_inputs.logger.debug(
-    #             f"Memory Used\n---------------------------------------------\n{real_mem_summary}\n---------------------------------------------"
-    #         )
-
-    #     # Merge and clean up the two dfs ------------
-    #     # remove duplicate columns to avoid 2 count columns with the same value
-    #     counts = list(duration_summary["count"])
-    #     duration_summary.drop("count", inplace=True, axis=1)
-    #     real_mem_summary.drop("count", inplace=True, axis=1)
-
-    #     # join 2 dataframes
-    #     self._merged_df = duration_summary.join(
-    #         real_mem_summary, lsuffix="_runtime", rsuffix="_mem"
-    #     )
-
-    #     # add back the job count column
-    #     self._merged_df.insert(0, "job_count", counts)
-
-    #     # keep the rows in run_order
-    #     self._merged_df.reindex(self.indexes)
-
-    #     # add the phase core hours
-    #     self._merged_df.loc[list(self._phase_core_hours), "core_hours"] = pd.Series(
-    #         self._phase_core_hours
-    #     )
-
-    #     # Create a column with phases, rather than row names
-    #     self._merged_df.reset_index(inplace=True)
-
-    #     self.genome.pipeline_inputs.cl_inputs.logger.info(
-    #         f"Resources Used per phase\n===============================\n{self._merged_df}\n===============================",
-    #     )
-    #     self.genome.pipeline_inputs.cl_inputs.logger.info(
-    #         f"Finished all {int(self._n_jobs):,} jobs\n======= {int(self._n_jobs - len(self._skipped_jobs)):,}-of-{int(self._n_jobs):,} JOBS =======\nTOTAL CORE HOURS = {int(self._total_hours):,} | {self._core_hours_str}\n===============================",
-    #     )
-
-    #     if len(self._skipped_jobs) > 0:
-    #         self.genome.pipeline_inputs.cl_inputs.logger.warning(
-    #             f"{len(self._skipped_jobs)} SLURM jobs were not included in the CPUTime total. Their job numbers are:\n{self._skipped_jobs}",
-    #         )
-
-    # def write_results(self) -> None:
-    #     """
-    #     If dryrun mode, display the intermediate outputs to the screen.
-
-    #     Otherwise, write the intermediate outputs to files.
-    #     """
-    #     if self.genome.pipeline_inputs.cl_inputs.dry_run_mode:
-    #         self.genome.pipeline_inputs.cl_inputs.logger.info(
-    #             f"Contents of '{str(self._results_dir)}/{self.name}.summary_resources.csv' |\n---------------------------------------------",
-    #         )
-    #         print(self._merged_df)
-    #         print("---------------------------------------------")
-    #     else:
-    #         # Define the summary output CSV file to be created
-    #         summary_file = File(
-    #             self._results_dir / f"{self.name}.summary_resources.csv",
-    #             self.genome.pipeline_inputs.cl_inputs.logger,
-    #         )
-    #         summary_file.check_status()
-    #         if summary_file.file_exists:
-    #             if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-    #                 self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{summary_file.file_name} written")
-    #         else:
-    #             self._merged_df.to_csv(summary_file.path_to_file, index=False)
-    #             assert (
-    #                 summary_file.path.exists()
-    #             ), f"{summary_file.file_name} was not written correctly"
-    #             if self.genome.pipeline_inputs.cl_inputs.debug_mode:
-    #                 self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{summary_file.file_name} written")
-
-    def run(self) -> None:
+    def write_intermediates(self) -> None:
         """
-        Combine the benchmark class into a single, callable function.
+        If dry_run mode, display the intermediate outputs to the screen.
+
+        Otherwise, write the intermediate outputs to files.
+        """
+        # Write the contents of the single-sample CSV file
+        if self._sample_file.file_exists is False:
+            self._sample_file.write_dataframe(df=self._metrics_data,
+                                        keep_header=True,
+                                        keep_index=False,
+                                        delim=",")
+            self._sample_file.check_status(should_file_exist=True)
+        elif self.genome.pipeline_inputs.cl_inputs.overwrite:
+            self.genome.pipeline_inputs.cl_inputs.logger.info(
+                f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=True, re-writing the single-sample benchmarking file | '{self._sample_file.path}'"
+            )
+            self._sample_file.write_dataframe(df=self._metrics_data,
+                                        keep_header=True,
+                                        keep_index=False,
+                                        delim=",")
+            self._sample_file.check_status(should_file_exist=True)
+        else:
+            self.genome.pipeline_inputs.cl_inputs.logger.info(
+                f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: found the single-sample benchmarking file | '{self._sample_file.path}'"
+            )
+
+        # Write the contents of the multi-sample CSV file
+        if self._all_samples_file.file_exists is False:
+            self._all_samples_file.write_dataframe(
+                df=self._metrics_data, keep_header=True, keep_index=False, delim=","
+            )
+            self._all_samples_file.check_status(should_file_exist=True)
+        elif (self._all_samples_file.file_exists and self.genome.pipeline_inputs.cl_inputs.overwrite):
+
+            self.genome.pipeline_inputs.cl_inputs.logger.info(
+                f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=True, re-writing the multi-sample benchmarking file | '{self._all_samples_file.path}'"
+            )
+            self._all_samples_file.write_dataframe(
+                df=self._metrics_data, keep_header=True, keep_index=False, delim=","
+            )
+            self._all_samples_file.check_status(should_file_exist=True)
+
+        elif self._all_samples_file.file_exists and self.genome.pipeline_inputs.cl_inputs.overwrite is False:
+
+            # load in previous data:
+            self._all_samples_file.load_csv()
+
+            # Clear any previously saved data
+            _uniq_list = list()
+
+            # Use the previous contents to ensure duplicate data are not written
+            for line in self._all_samples_file._existing_data:
+                uniq_string = f"{line["SampleID"]}_{line["JobName"]}"
+                # new_values = {key: val for key, val in line.items() if key != uniq_string}
+                # self._metadata_dict[new_key] = new_values
+                _uniq_list.append(uniq_string)
+
+            for row in self._metrics_list:
+                if f"{row["SampleID"]}_{row["JobName"]}" in _uniq_list:
+                    if self.genome.pipeline_inputs.cl_inputs.debug_mode:
+                        self.genome.pipeline_inputs.cl_inputs.logger.debug(
+                            f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: skipping duplicate row contents saved previously.\nROW={row}"
+                        )
+                        breakpoint()
+                else:
+                    _num_rows = len(self._metrics_list)
+                    if _num_rows > 1:
+                        msg="new rows"
+                    else:
+                        msg="a new row"
+                    self.genome.pipeline_inputs.cl_inputs.logger.info(
+                        f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=False, adding {msg} to the multi-sample benchmarking file | '{self._all_samples_file.path}'"
+                    )
+                    _col_names = list(self._metrics_list[0].keys())
+                    self._all_samples_file.add_row(
+                        data_dict=row, col_names=_col_names,
+                    )
+
+    def get_timedelta(self, total_seconds: int) -> "timedelta":
+        """
+        Convert number of seconds into a timedelta format.
+        """
+        return timedelta(seconds=total_seconds)
+
+    def load_all_samples(self) -> None:
+        """
+        After benchmarking the COMPLETED SBATCH jobs for multiple Genome() objects,
+        load in the multi-sample CSV for summarization.
+        """
+
+        if (self._all_samples_file.file_exists and
+            (self._summary_file.file_exists is False or 
+             self.genome.pipeline_inputs.cl_inputs.overwrite)
+            ):
+
+            self._all_samples_file.load_csv()
+            self._metrics_list = self._all_samples_file._existing_data
+
+            #  convert list of dicts obj to Pandas dataframe
+            self._metrics_data = pd.DataFrame.from_records(
+                self._metrics_list, columns=list(self._metrics_list[0].keys())
+            )
+
+            # Exclude metrics for non-replicate jobs
+            self._metrics_data.drop_duplicates(subset=["JobName"], inplace=True)
+
+            # Convert the DD-HH:MM:SS format string to a total_seconds
+            self._metrics_data["Elapsed_seconds"] = self._metrics_data[["Elapsed"]].map(self.get_sec)
+
+            # Convert the DD-HH:MM:SS format string to a timedelta obj for descriptive stats
+            self._metrics_data["Elapsed_Time"] = self._metrics_data[["Elapsed_seconds"]].map(
+                self.get_timedelta
+            )
+
+            # Convert to memory strings to floats for descriptive stats
+            self._metrics_data[["MaxRSS_G", "MaxVMSize_G"]] = self._metrics_data[["MaxRSS_G", "MaxVMSize_G"]].apply(
+                pd.to_numeric
+            )
+
+            if self.genome.pipeline_inputs.cl_inputs.debug_mode:
+                self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: accounting output for all jobs |'")
+                print(
+                    "---------------------------------------------------------------------------------------------------------------------------------------"
+                )
+                # Print the DataFrame without headers and without the index
+                print(self._metrics_data.to_csv(sep=",", header=True, index=False))
+                print(
+                    "---------------------------------------------------------------------------------------------------------------------------------------"
+                )
+        else:
+            if self._all_samples_file.file_exists is False:
+                self.genome.pipeline_inputs.cl_inputs.logger.warning(
+                    f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: missing a required file | '{self._all_samples_file.path}'"
+                )
+
+    def calculate_range(self, series: pd.Series) -> "pd.Series":
+        """
+        Calculate the range (max - min) of the Timedelta values.
+
+        Args:
+            series (pd.Series): an existing DataFrame column.
+
+        Returns:
+            series (pd.Series): a new DataFrame columns
+        """
+        return series.max() - series.min()
+
+    def get_timedelta_str(self, tdelta: "timedelta") -> str:
+        """
+        Re-formats a '0 days 00:00:00' timedelta object back into a '0-00:00:00' from SLURM. Used internally by summarize_resources() only.
+        """
+        d = {"days": tdelta.days}
+        d["hours"], remainder = divmod(tdelta.seconds, 3600)
+        d["minutes"], d["seconds"] = divmod(remainder, 60)
+        for key, value in d.items():
+            if key != "days":
+                d[key] = str(value).zfill(2)
+        return f'{d["days"]}-{d["hours"]}:{d["minutes"]}:{d["seconds"]}'
+
+    def str_mem(self, mem: float) -> str:
+        """
+        Re-formats a float memory used back to '00.00G' string.
+        Used internally by process_resources() and summary().
+        """
+        mem_string = f"{round(mem,2)}G"
+        return mem_string
+
+    def summarize_resources(self) -> None:
+        """
+        Calculate resource usage stats across multiple samples.
+        """        
+        # Summarize elapsed wall time (NOT CORE TIME)
+        duration_summary = pd.DataFrame(
+            self._metrics_data.groupby("JobType").agg(
+                job_count=("Elapsed_Time", "count"),
+                min=("Elapsed_Time", "min"),
+                mean=("Elapsed_Time", "mean"),
+                median=("Elapsed_Time", "median"),
+                max=("Elapsed_Time", "max"),
+                range=("Elapsed_Time", self.calculate_range),
+            )
+        )
+        # Convert the timedelta objects back to a DD-HH:MM:SS format string
+        duration_summary[["min", "mean", "median", "max", "range"]] = duration_summary[
+            ["min", "mean", "median", "max", "range"]
+        ].map(self.get_timedelta_str)
+
+        # Ungroup
+        duration_summary.reset_index(inplace=True)
+
+        if self.genome.pipeline_inputs.cl_inputs.debug_mode:
+
+            self.genome.pipeline_inputs.cl_inputs.logger.debug(
+                f"Duration\n---------------------------------------------\n{duration_summary.to_csv(sep=",", header=True, index=False)}\n---------------------------------------------",
+            )
+
+        # Summarize REAL memory usage
+        real_mem_summary = pd.DataFrame(
+            self._metrics_data.groupby("JobType").agg(
+                min=("MaxRSS_G", "min"),
+                mean=("MaxRSS_G", "mean"),
+                median=("MaxRSS_G", "median"),
+                max=("MaxRSS_G", "max"),
+                range=("MaxRSS_G", self.calculate_range),
+            )
+        )
+
+        # Convert the memory floats back to a formatted string
+        real_mem_summary[["min", "mean", "median", "max", "range"]] = real_mem_summary[
+            ["min", "mean", "median", "max", "range"]
+        ].map(self.str_mem)
+
+        # Ungroup
+        real_mem_summary.reset_index(inplace=True)
+
+        if self.genome.pipeline_inputs.cl_inputs.debug_mode:
+            self.genome.pipeline_inputs.cl_inputs.logger.debug(
+                f"Memory Used\n---------------------------------------------\n{real_mem_summary.to_csv(sep=",", header=True, index=False)}\n---------------------------------------------"
+            )
+
+        # Merge and clean up the two dfs ------------
+        # remove duplicate columns to avoid 2 JobType columns with the same value
+        job_types = list(duration_summary["JobType"])
+        duration_summary.drop("JobType", inplace=True, axis=1)
+        real_mem_summary.drop("JobType", inplace=True, axis=1)
+
+        # Join the 2 dataframes
+        self._summary_data = duration_summary.join(
+            real_mem_summary, lsuffix="_runtime", rsuffix="_mem"
+        )
+
+        # Add back the job type column
+        self._summary_data.insert(0, "job_type", job_types)
+
+        # TO DO: maybe include CORE HOURS instead of just wall hours?
+
+        self.genome.pipeline_inputs.cl_inputs.logger.info(
+            f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: resources used summary\n===============================\n{self._summary_data.to_csv(sep=",", header=True, index=False)}\n===============================",
+        )
+        self.genome.pipeline_inputs.cl_inputs.logger.info(
+            f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: finished all {int(self._n_jobs):,} jobs\n======= {int(self._n_jobs - len(self._skipped_jobs)):,}-of-{int(self._n_jobs):,} JOBS =======\nTOTAL CORE HOURS = {int(self._total_hours):,} | {self._core_hours_str}\n===============================",
+        )
+
+        if len(self._skipped_jobs) > 0:
+            self.genome.pipeline_inputs.cl_inputs.logger.warning(
+                f"{len(self._skipped_jobs)} SLURM jobs were not included in the CPUTime total. Their job numbers are:\n{self._skipped_jobs}",
+            )
+
+    def write_summary(self) -> None:
+        """
+        If dry_run mode, display the final output to the screen.
+
+        Otherwise, write the final output to a new file.
+        """
+        # Write the contents of the multi-sample summary CSV file
+        if self._summary_file.file_exists is False:
+            self._summary_file.write_dataframe(
+                df=self._summary_data,
+                keep_header=True,
+                keep_index=False,
+                delim=",",
+                )
+            self._summary_file.check_status(should_file_exist=True)
+        elif self.genome.pipeline_inputs.cl_inputs.overwrite:
+            self.genome.pipeline_inputs.cl_inputs.logger.info(
+                f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=True, re-writing the multi-sample summary file | '{self._summary_file.path}'"
+            )
+            self._summary_file.write_dataframe(df=self._metrics_data,
+                                        keep_header=True,
+                                        keep_index=False,
+                                        delim=",")
+            self._summary_file.check_status(should_file_exist=True)
+        else:
+            self.genome.pipeline_inputs.cl_inputs.logger.info(
+                f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=False, found the multi-sample summary file | '{self._summary_file.path}'"
+            )
+
+    def generate_intermediates(self) -> None:
+        """
+        Combine the single-sample functions of the benchmark class into a single, callable function.
         """
         self.find_job_logs()
-        self.process_resources()
-        breakpoint()
-        # WHERE I LEFT OFF...
-        # TO DO: make a CSV file for COMPLETED SBATCH job resource usage PER SAMPLE
-        # TO DO: add each line to a CSV for ALL SAMPLES in pipeline, and then use summary()?
-        
-        # self.summary()
-        # self.write_results()
+        self.process_resources(chunk_size=1)
+        self.write_intermediates()
+
+    def generate_summary(self) -> None:
+        """
+        Combine the multi-sample functions of the benchmark class into a single, callable function.
+        """
+        self.load_all_samples()
+        self.summarize_resources()
