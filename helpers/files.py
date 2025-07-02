@@ -194,9 +194,9 @@ class File:
                 dict_writer.writeheader()
                 dict_writer.writerows(rowdicts=line_list)
 
-    def add_rows(self, col_names: List[str], data_dict: Dict[str, str]) -> None:
+    def add_row(self, col_names: List[str], data_dict: Dict[str, str]) -> None:
         """
-        Append rows to a csv.
+        Append a single row to CSV.
         """
         if self.cl_inputs.dry_run_mode:
             print(",".join(data_dict.values()))
@@ -208,7 +208,7 @@ class File:
                         self.cl_inputs.logger.debug(debug_msg)
                     else:
                         self.cl_inputs.logger.debug(f"{self.cl_inputs.logger_msg}: {debug_msg}")
-
+                
                 with open(str(self.path), mode="a") as file:
                     dictwriter = DictWriter(file, fieldnames=col_names)
                     dictwriter.writerow(data_dict)

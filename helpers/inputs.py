@@ -133,7 +133,7 @@ class InputManager:
                     f"{_log_msg}: previous value '{new_key}={old_value}' | new value '{new_key}={new_val}'"
                 )
             else:
-                self.logger.debug(
+                self.logger.info(
                     f"{_log_msg}: previous value replaced with | '{new_key}={new_val}'"
                 )
         else:
