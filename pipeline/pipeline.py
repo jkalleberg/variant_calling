@@ -97,14 +97,20 @@ class Pipeline:
 
         if self.pipeline_inputs.cl_inputs.debug_mode:
             self._ending_row = self._starting_row + 1
+        # elif self.pipeline_inputs.cl_inputs.args.submit_stop >= 1 and self.pipeline_inputs.cl_inputs.args.submit_stop < self.pipeline_inputs._total_num_genomes:
+        #     self._ending_row = self.pipeline_inputs.cl_inputs.args.submit_stop + 1
         else:
             self._ending_row = self.pipeline_inputs._total_num_genomes
 
-        if self._ending_row < self._starting_row:
+        if self._ending_row <= self._starting_row:
             self.pipeline_inputs.cl_inputs.logger.error(
                 f"{self.pipeline_inputs.cl_inputs.logger_msg}: the value for ending_row must be greater than or equal to '{self._starting_row:,}'.\nExiting... "
             )
             exit(1)
+        
+        # print("STARTING ROW:", self._starting_row)
+        # print("ENDING ROW:", self._ending_row)
+        # breakpoint()
 
         # How many times will variant calling be performed per-sample?
         _n_variant_callers = len(self.pipeline_inputs.variant_callers.keys())
@@ -114,6 +120,9 @@ class Pipeline:
         self._job_ids = [None] * _total_jobs
 
         for i, g in enumerate(self.pipeline_inputs._all_genomes.items()):
+            # print("I:", i)
+            # print("STARTING ROW:", self._starting_row)
+            # breakpoint()
             if i < self._starting_row:
                 continue
 
@@ -202,6 +211,11 @@ class Pipeline:
                     else:
                         self._job_ids[i] = None
                         self._skip_counter += 1
+                    
+                    # print("I:", i)
+                    # print("RESULT:", self._result)
+                    # print("JOB IDS:", self._job_ids[0:10])
+                    # breakpoint()
 
                     # Revert the logger message back to original
                     self.pipeline_inputs.cl_inputs.logger_msg = _original_logger_msg
@@ -214,11 +228,18 @@ class Pipeline:
                 )
 
             if halt_loop:
+                if self.pipeline_inputs.cl_inputs.dry_run_mode:
+                    _msg1 = "number of samples pretending to submit"
+                    _msg2 = "number of samples pretending to skip"
+                else:
+                    _msg1 = "number of samples submitted"
+                    _msg2 = "number of samples skipped"
+
                 self.pipeline_inputs.cl_inputs.logger.info(
-                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: number of samples submitted | {self._submitted_counter}"
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: {_msg1} | {self._submitted_counter}"
                 )
                 self.pipeline_inputs.cl_inputs.logger.info(
-                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: number of samples skipped | {self._skip_counter}"
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: {_msg2} | {self._skip_counter}"
                 )
 
                 # Uncomment for Cue
@@ -226,41 +247,47 @@ class Pipeline:
                 #     self.pipeline_inputs.cl_inputs.logger.info(
                 #         f"{self.pipeline_inputs.cl_inputs.logger_msg}: number of samples to re-run with CUE | {self._resubmission_counter}"
                 #     )
-                
-                
-                # print("I:", i)
-                # print("ITER:", (i+1))
-                # print("JOB IDS:", self._job_ids)
-                # print("SUBMIT SIZE:", self.submit_size)
 
                 if self._job_ids:
+                    
+                    # print("I:", i)
+                    # print("ITER:", (i+1))
+                    # print("JOB IDS:", self._job_ids[0:10])
+                    # breakpoint()
 
+                    # print("SUBMIT SIZE:", self.submit_size)
                     # print("SUBMIT START:", self.pipeline_inputs.cl_inputs.args.submit_start)
                     # print("STARTING ROW:", self._starting_row)
 
                     # print("TOTAL GENOMES:", self.pipeline_inputs._total_num_genomes)
                     # print("ENDING ROW:", self._ending_row)
+                    # breakpoint()
 
                     if (i+1) == self.pipeline_inputs._total_num_genomes:
 
                         if self.pipeline_inputs.cl_inputs.args.submit_size > 1:
                             total = (
                                 self._skip_counter + self._submitted_counter
-                            )  # + self._rerun_counter
-                            # print("TOTAL:", total)
+                            )  # + self._rerun_counter??
+
                             # print("LOOK OVER HERE!")
+                            # print("TOTAL:", total)
+                            # print("START:", start)
+
                             start = total - self.submit_size
                             _current_job_ids = self._job_ids[start : (i + 1)]
-                            # print("START:", start)
+
                             pass
                         else:
                             # print("OVER HERE!")
-                            _end = i + self.submit_size
                             # print("END:", _end)
+                            _end = i + self.submit_size
+                            
                             _current_job_ids = self._job_ids[i:_end]
                     else: 
                         # print("NOPE, OVER HERE!")
                         _current_job_ids = self._job_ids[self._starting_row:(i+1)]
+                    
                     # print("CURRENT JOB IDS:", _current_job_ids)
                     # breakpoint()
 
@@ -293,6 +320,7 @@ class Pipeline:
         #             f"{inputs.logger_msg}: Please update '--samples' to '{_samples_file}'"
         #         )
         else:
+
             # Should only print a message if necessary
             self.pipeline_inputs.check_submission(
                 slurm_job_ids=self._job_ids,
