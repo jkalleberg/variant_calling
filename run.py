@@ -13,6 +13,7 @@ usage: python3 run.py                                               \
 
 from pathlib import Path
 from sys import path, exit
+from os import getenv
 
 abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
@@ -28,7 +29,8 @@ from pipeline.genome import Genome
 
 def __init__() -> None:
 
-    run = CustomModule()
+    # Ensure that the --output-path flag is included
+    run = CustomModule(output_required=True)
     run.start_module()
 
     # Add custom command line flags:
@@ -89,17 +91,25 @@ def __init__() -> None:
         metavar="</path/file_prefix_only>", 
     )
     run._parser.add_argument(
-        "--submit-start",
-        dest="submit_start",
-        help="1-based index that controls which row to begin processing with --input\n(default: %(default)s)",
+        "--submit-size",
+        dest="submit_size",
+        help="controls the number of samples' submitted for variant calling;\n effectively rate-limits the amount of SLURM jobs submitted\n(default: %(default)s)",
         type=int,
         metavar="<int>",
         default=1,
     )
     run._parser.add_argument(
-        "--submit-size",
-        dest="submit_size",
-        help="controls the number of samples' submitted for variant calling;\n effectively rate-limits the amount of SLURM jobs submitted\n(default: %(default)s)",
+        "--submit-start",
+        dest="submit_start",
+        help="1-based index representing the first row of --input-path to include\n(default: %(default)s)",
+        type=int,
+        metavar="<int>",
+        default=1,
+    )
+    run._parser.add_argument(
+        "--submit-stop",
+        dest="submit_stop",
+        help="1-based index representing the final row of --input-path to include\n(default: %(default)s)",
         type=int,
         metavar="<int>",
         default=1,
@@ -136,13 +146,20 @@ def __init__() -> None:
             "--dry-run",
             # "--debug",
             "--overwrite",
-            # "--submit-start",
-            # "2",
-            # "--submit-size",
-            # "2",
-            
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
             # "--get-help",
+            
+            # THESE DO NOT WORK YET!
+            # "--submit-size",
+            # # "2",
+            # "10",
+            # # "--submit-start",
+            # # "2",
+            # "--submit-stop",
+            # # "2",
+            # "10",
+            #########################
+            
             # "--resources",
             # "tutorial/data/resources.json",
             # "--modules",
@@ -154,24 +171,44 @@ def __init__() -> None:
         ]
     )
 
+    # Confirm that user-provided command line arguments are valid
     try:
-        # Check generic command-line flags
+        # Check generic command-line flags -------------------------
         run.check_args()
 
-        # Check custom command line flags
+        # INPUT PATH: Determine if a directory name was given as input, when it should be a file
+        # Confirm that a file.ext format was entered
+        assert (
+            run._args.in_path.stem != run._args.in_path.name and run._args.in_path.is_file()
+        ), f"invalid --input-path; expected a file, did you enter a directory? | '{run._args.in_path}'"
+
+        # OUTPUT PATH: Determine if a file name was given as output, when it should be a directory
+        assert (
+            run._args.out_path.stem == run._args.out_path.name and run._args.out_path.is_dir()
+        ), f"invalid --input-path; expected a file, did you enter a directory? | '{run._args.out_path}'"
+
+        ### Check custom command line flags ------------------------
+        # FLEXIBLE START/STOP ARGS: terminate the pipelines if submit_stop value is less than submit_stop
+        assert (
+            run._args.submit_start <= run._args.submit_stop
+        ), f"--submit-start={run._args.submit_start:,} must be less than or equal to --submit-stop={run._args.submit_stop:,}'"
+
+        # COMPUTE ENVIRONMENT FLAGS: terminate the pipeline if it can run on the system
         # Make the --modules flag [REQUIRED]
         assert (
             run._args.modules
-        ), f"missing [REQUIRED] flag: --modules; Please provide the path to an existing modules BASH file containing HPC-cluster-specific software dependencies"
+        ), f"missing [REQUIRED] flag: --modules; Please provide the path to an existing modules.sh file containing HPC-cluster-specific software dependencies"
 
         # Resolve any relative path entered for modules.sh
         _resolved_module_path = Path(run._args.modules).resolve()
 
         # Confirm path provide is valid
-        assert _resolved_module_path.is_file(), f"unable to find the modules file | '{_resolved_module_path}'"
+        assert (
+            _resolved_module_path.is_file()
+        ), f"unable to find the modules file | '{_resolved_module_path}'"
         run._args.modules = _resolved_module_path
 
-        # Make the --resources flag [REQUIRED]
+        #  Make the --resources flag [REQUIRED]
         assert (
             run._args.resource_config
         ), "missing [REQUIRED] flag: --resources; Please provide the path to an existing JSON file containing SLURM SBATCH flags"
@@ -181,7 +218,12 @@ def __init__() -> None:
 
         # Confirm path provide is valid
         assert _resolved_resource_path.is_file(), f"unable to find the resource config JSON file | '{_resolved_resource_path}'"
+        run._args.resource_config = _resolved_resource_path
 
+        # PIPELINE SPECIFIC INPUTS: terminate the pipeline if analysis inputs were entered incorrectly
+        #########################
+        #   Reference genome    #
+        #########################
         # Make the flag --reference-prefix [REQUIRED]
         assert (
             run._args.ref_file
@@ -194,11 +236,37 @@ def __init__() -> None:
         _reference_files = iterdir_with_prefix(
             absolute_path=_resolved_ref_path.parent,
             prefix=_resolved_ref_path.name,
-            valid_suffixes=[".fasta", ".fa", ".fai", ".dict", ".FASTA", ".FA", ".FAI", ".DICT"],
-            )
+            valid_suffixes=[
+                ".fasta",
+                ".fa",
+                ".fai",
+                ".dict",
+                ".FASTA",
+                ".FA",
+                ".FAI",
+                ".DICT",
+            ],
+        )
 
-        assert (len(_reference_files) > 2), f"unable to find at least two reference genome files (.FASTA + .FAI) | '{run._args.ref_file}'"
+        assert (
+            len(_reference_files) > 2
+        ), f"unable to find at least two reference genome files (.FASTA + .FAI) | '{run._args.ref_file}'"
 
+        # Confirm that a .fai index file exists prior to running PICARD CreateSequenceDict()
+        for file in _reference_files:
+            if "fai" in file.suffix.lower():
+                # Update the command-line args to point to the FASTA file as a Path() object
+                run._args.ref_file  = Path(file).parent / Path(file).stem
+
+        # Confirm path provide is valid
+        _files_found = ",".join([str(r) for r in _reference_files])
+        assert (
+            run._args.ref_file.is_file()
+        ), f"missing a .fai index file in reference genome directory entered | '{run._args.ref_file.parent}'.\nFiles found: '{_files_found}'"
+
+        #############################################
+        #   Variant Calling Model Checkpoint(s)     #
+        #############################################
         # Convert a potential comma-separated string of checkpoint prefixes into a iterable list
         if "," in run._args.model_prefix:
             _ckpt_list = run._args.model_prefix.split(",")
@@ -216,16 +284,24 @@ def __init__() -> None:
         # Get the expected default checkpoint path (custom bovid-trained WGS AF)
         _default_ckpt_prefix = Path(run.get_arg_default("model_prefix")).resolve()
 
-        # print("MODEL PREFIX:", run._args.model_prefix)
-        # print("DEEP VARIANT:", _use_deepvariant)
-        # print(type(_use_deepvariant[0]))
-        # # print("CUE:", _use_cue)
-        # breakpoint()
-
         # Create an empty list to store valid checkpoint paths
         _list_of_ckpt_prefixes = list()
 
         if _use_deepvariant and len(_use_deepvariant) == 1:
+
+            # Get the value of 'BIN_VERSION_DV', return None if not set
+            _dv_version = getenv("BIN_VERSION_DV")
+
+            # Confirm this environment variable exists
+            assert (
+                _dv_version is not None
+            ), f"missing [REQUIRED] environment variable: ($BIN_VERSION_DV); Please double check that this variable is included in your modules.sh file"
+
+            # Do not allow the user to deviate from v1.4.0
+            assert (
+                _dv_version == "1.4.0"
+            ), f"invalid environment variable ($BIN_VERSION_DV); Please edit your modules.sh file to use the expected version of DeepVariant"
+            # NOTE: In future, newer versions may become supported, but as they are untested, we do not encourage deviating from this expectation.
 
             # Identify the DeepVariant checkpoint prefix entered
             _user_ckpt_prefix = Path(_use_deepvariant[0]).resolve()
@@ -251,18 +327,12 @@ def __init__() -> None:
                 print("ADD LOGIC FOR DIFFERENT DEEPVARIANT CHECKPOINTS")
                 breakpoint()
 
-            # Confirm that all the expected checkpoint files are available
-            # print("ABSOLUTE PATH:", _user_ckpt_prefix.parent)
-            # print("PREFIX:", _user_ckpt_prefix.name)
-            # breakpoint()
+            # Confirm that all the expected DeepVariant v1.4 checkpoint files are available
             _checkpoint_files = iterdir_with_prefix(
                 absolute_path=_user_ckpt_prefix.parent,
                 prefix=_user_ckpt_prefix.name,
                 valid_suffixes=[".data-00000-of-00001", ".json", ".index", ".meta",],
                 )
-            # print("CHECKPOINT FILES:", _checkpoint_files)
-            # print("NUMBER OF CHECKPOINT FILES:", len(_checkpoint_files))
-            # breakpoint()
 
             assert (len(_checkpoint_files) == 4), f"unable to find all four DeepVariant checkpoint files | '{_user_ckpt_prefix}'"
 
@@ -270,17 +340,17 @@ def __init__() -> None:
             print("ADD LOGIC CUE CHECKPOINT")
             breakpoint()
 
+        # Confirm that a model checkpoint was entered
         assert (len(_list_of_ckpt_prefixes) >= 1), f"unable to find at least one valid checkpoint | '{_user_ckpt_prefix}'"
 
         # Save the list as a new command-line argument
-        # run._args.model_prefix = [Path(p).resolve() for p in _ckpt_list]
         run._args.model_prefix = _list_of_ckpt_prefixes
 
     except AssertionError as error:
-        run._logger.error(f"{error}.\nExiting... ")
+        run._logger.error(f"{run._logger_msg}: {error}.\nExiting... ")
         exit(1)
 
-    # Initialize all command line inputs
+    # Save the generic command line arguments for convenience
     run.process_args()
 
     # Handle custom inputs needed for the generic variant calling pipeline
@@ -292,48 +362,9 @@ def __init__() -> None:
     _cl_inputs.update_mode()
     _cl_inputs.create_logging_msg()
 
-    # REFERENCE: Confirm a .fai index file exists prior to running PICARD CreateSequenceDict()
-    for file in _reference_files:
-        if "fai" in file.suffix.lower():
-            # Update the command-line args to point to the FASTA file as a Path() object
-            run._args.ref_file  = Path(file).parent / Path(file).stem
-
-    if isinstance(run._args.ref_file, Path) and run._args.ref_file.is_file():
-        if _cl_inputs.debug_mode:
-            run._logger.debug(f"{_cl_inputs.logger_msg}: valid --reference FASTA file | '{run._args.ref_file}'")
-    else:
-        _files_found = ",".join(_reference_files)
-        run._logger.error(f"{_cl_inputs.logger_msg}: missing a .fai index file in reference genome directory\nFiles found: {_files_found}")
-
-    # INPUT PATH: Determine if a directory name was given as input, when it should be a file
-    if run._input_path.stem != run._input_path.name:
-        # Confirm input is an existing file
-        if run._input_path.is_file():
-            if _cl_inputs.debug_mode:
-                run._logger.debug(f"{_cl_inputs.logger_msg}: valid --input; detected an existing file.")
-            _cl_inputs._input_path = run._input_path
-        else:
-            run._logger.error(f"{_cl_inputs.logger_msg}: invalid --input; unable to find a sample CSV file | {run._input_path}\nExiting...")
-            exit(1)
-    else:
-        # TO DO: enable providing an input directory (e.g., samples + metadata together)?
-        run._logger.error(f"invalid --input; expected a file, did you enter a directory? | {run._input_path}\nExiting...")
-        exit(1)
-
-    # OUTPUT PATH: Determine if a file name was given as output, when it should be a directory
-    if run._output_path.stem != run._output_path.name:
-        run._logger.error(f"invalid --output-path; expected a directory, did you enter a file? | {run._output_path}\nExiting...")
-        exit(1)
-    else:
-        # Create a new directory, if necessary
-        if not run._output_path.exists():
-            _cl_inputs.create_a_dir(dir_name=run._output_path)
-        else:
-            if _cl_inputs.debug_mode:
-                run._logger.debug(f"{_cl_inputs.logger_msg}: valid --output-path; detected an existing directory.")
-
-        # Save valid command-line inputs
-        _cl_inputs._output_path = run._output_path
+    # Save valid command-line args for con
+    _cl_inputs._output_path = run._output_path
+    _cl_inputs._input_path = run._input_path
 
     # Load in SLURM resource config file
     _cl_inputs.load_slurm_resources()
@@ -374,9 +405,10 @@ def __init__() -> None:
     _pipeline_inputs.count_inputs()    
 
     # Define a temp file to save samples to re-run
-    _pipeline_inputs.create_new_sample_file()
+    # NOTE: this isn't currently used because there isn't a --check-samples flag (yet)
+    # _pipeline_inputs.create_new_sample_file()
 
-    # Define a temp file to store SLURM job ids for compute/wall time benchmarking
+    # If --benchmark=True, define a temp file to store SLURM job ids for compute/wall time benchmarking
     _pipeline_inputs.create_benchmarking_file()
 
     # Load in the original samples file
