@@ -37,20 +37,20 @@ def __init__() -> None:
     )
 
     # Uncomment to force arg entry at command line
-    # archive.collect_args()
+    archive.collect_args()
 
     # Edit for manually testing command line arguments
-    archive.collect_args(
-        [
-            "-I",
-            # "../CATTLE_TEST/1051/1051.pkl",
-            "../CATTLE_TEST/384425/384425.pkl",
-            "--dry-run",
-            # "--debug",
-            # "--overwrite",
-            # "--get-stats",
-        ]
-    )
+    # archive.collect_args(
+    #     [
+    #         "-I",
+    #         # "../CATTLE_TEST/1051/1051.pkl",
+    #         "../CATTLE_TEST/384425/384425.pkl",
+    #         "--dry-run",
+    #         # "--debug",
+    #         # "--overwrite",
+    #         # "--get-stats",
+    #     ]
+    # )
 
     try:
         # Check generic command-line flags
