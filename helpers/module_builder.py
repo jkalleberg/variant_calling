@@ -33,7 +33,7 @@ class CustomModule:
     """
     # Optional parameters
     output_required: bool = True
-    
+
     # internal parameters
     _args: Union[None, "Namespace"] = field(default=None, init=False, repr=False)
     _current_file: Union[None, str] = field(default=None, init=False, repr=False)
@@ -82,8 +82,8 @@ class CustomModule:
             )
         self._parser.add_argument(
             "-I",
-            "--input",
-            dest="input",
+            "--input-path",
+            dest="in_path",
             type=str,
             help="[REQUIRED]\ninput path\nIf a directory is provided, multiple inputs will be identified.\nIf a file is provided, only that file will be used as input.",
             metavar="</path/to/dir/> or </path/to/file>",
@@ -125,7 +125,7 @@ class CustomModule:
             self._args = self._parser.parse_args()
         else:
             self._args = self._parser.parse_args(manual_args)
-        
+
         if self._args.debug:
             str_args = "COMMAND LINE ARGS USED: "
             for key, val in vars(self._args).items():
@@ -147,29 +147,29 @@ class CustomModule:
         if self.output_required:
             assert (
                 self._args.out_path
-            ), "missing [REQUIRED] flag: --output; Please provide a directory or file name for saving results"
+            ), "missing [REQUIRED] flag: --output-path; Please provide a directory or file name for saving results"
 
             # Resolve potential relative path entered
             _resolved_out_path = Path(self._args.out_path).resolve()
             self._args.out_path = _resolved_out_path
-        
+
         assert (
-            self._args.input
-        ), "missing [REQUIRED] flag: --input; Please provide either a directory location or an existing file"
-        
+            self._args.in_path
+        ), "missing [REQUIRED] flag: --input-path; Please provide either a directory location or an existing file"
+
         # Resolve potential relative path entered
-        _resolved_in_path = Path(self._args.input).resolve()
-        
+        _resolved_in_path = Path(self._args.in_path).resolve()
+
         # Confirm resolved Path is valid
         assert (_resolved_in_path.is_file() or _resolved_in_path.is_dir()), f"unable to find the input path | '{_resolved_in_path}'"
-        self._args.input = _resolved_in_path
-    
-    def get_arg_default(self, arg_name: str = "input") -> str:
+        self._args.in_path = _resolved_in_path
+
+    def get_arg_default(self, arg_name: str = "in_path") -> str:
         """
         Provide the default value for a command-line argument.
         """
         return self._parser.get_default(arg_name)
-     
+
     def process_args(self) -> None:
         """
         Handle expected defaults provide at the command line.
@@ -183,8 +183,8 @@ class CustomModule:
             self._output_path = Path(self._args.out_path).resolve()
         else:
             self._output_path = None
-        
-        self._input_path = Path(self._args.input).resolve()
+
+        self._input_path = Path(self._args.in_path).resolve()
         self._debug_mode = self._args.debug
         self._dry_run_mode = self._args.dry_run
         self._overwrite = self._args.overwrite
