@@ -27,18 +27,30 @@ def __init__() -> None:
     archive = CustomModule(output_required=False)
     archive.start_module()
 
+    # Add custom command line flags:
+    archive._parser.add_argument(
+        "--get-stats",
+        dest="get_stats",
+        help="If True, then BCFtools +smpl-stats will run after cleaning up temporary files.\n(default: %(default)s)",
+        default=False,
+        action="store_true",
+    )
+
     # Uncomment to force arg entry at command line
-    archive.collect_args()
+    # archive.collect_args()
 
     # Edit for manually testing command line arguments
-    # archive.collect_args(
-    #     [
-    #         "-I",
-    #         "../CATTLE_TEST/1051/1051.pkl",
-    #         # "--dry-run",
-    #         # "--debug",
-    #         # "--overwrite",
-    #     ])
+    archive.collect_args(
+        [
+            "-I",
+            # "../CATTLE_TEST/1051/1051.pkl",
+            "../CATTLE_TEST/384425/384425.pkl",
+            "--dry-run",
+            # "--debug",
+            # "--overwrite",
+            # "--get-stats",
+        ]
+    )
 
     try:
         # Check generic command-line flags
@@ -110,25 +122,28 @@ def __init__() -> None:
         clean_files = CleanUp(genome=_genome)
 
         # Start the post-variant-calling SBATCH resource usage benchmarking
-        benchmark_jobs = Benchmark(genome=_genome)
+        if archive._args.get_stats is True:
+            benchmark_jobs = Benchmark(genome=_genome)
 
         for model_type, variables in _genome.pipeline_inputs.variant_callers.items():   
-            # print(f"KEY: {model_type}={vars}") 
+            # print(f"KEY: {model_type}={vars}")
             # breakpoint()
-            
+
             _default_output = variables["default_output"]
             clean_files.check_output(default_output=_default_output)
             clean_files.remove_all_intermediates()
 
-            if _default_output.path.is_file():
-                benchmark_jobs.generate_intermediates()
-            else:
-                _model_info = f"{model_type} {variables["version"]} ({variables["checkpoint_name"]})"
-                archive._logger.warning(
-                    f"missing the a required default_output after variant calling | '{_model_info}'"
-                )
+            if archive._args.get_stats is True:
+                if _default_output.path.is_file():
+                    benchmark_jobs.generate_intermediates()
+                else:
+                    _model_info = f"{model_type} {variables["version"]} ({variables["checkpoint_name"]})"
+                    archive._logger.warning(
+                        f"missing the a required default_output after variant calling | '{_model_info}'"
+                    )
 
-        benchmark_jobs.generate_summary()
+        if archive._args.get_stats is True:
+            benchmark_jobs.generate_summary()
 
     except AssertionError as error:
         archive._logger.error(f"{error}.\nExiting... ")
