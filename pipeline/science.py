@@ -232,13 +232,17 @@ class Science:
         # Select only the variable names, ignoring the variable paths
         _variable_names = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "name" in key.lower()}
 
+        # Create lists to save any non-default custom arguments
         _make_examples_args = list()
         _call_variants_args = list()
         _post_process_args = list()
-        
-        print("LOOK HERE!")
-        print("CONFIGS:", self.genome.pipeline_inputs._configs)
-        breakpoint()
+
+        assert "deepvariant" in self.genome.pipeline_inputs._configs.keys(), f"unexpectedly missing the DeepVariant config file" 
+
+        _model_config = self.genome.pipeline_inputs._configs["deepvariant"]
+
+        if "cnn_homref_call_min_gq" in _model_config.keys() and _model_config["cnn_homref_call_min_gq"] != 20:
+            _post_process_args.append(f"cnn_homref_call_min_gq={_model_config["cnn_homref_call_min_gq"]}")
 
         for k,v in _variable_names.items():
             _k_prefix = k.split("_")[0]
@@ -252,17 +256,40 @@ class Science:
             elif "reads" in k:
                 flags.append(f"--reads=/{_binding}/{v}")
             elif "output" in k:
-                flags.append(f"--output_vcf=/{_binding}/{v}")
-                if "g." in v:
+
+                if "g.vcf" in v.lower() or "gvcf" in v.lower():
+                    _sample_name = v.split(".")[0]
+                    _vcf_output = f"{_sample_name}.vcf.gz"
+
+                    # Creating a g.vcf requires also creating a vcf
+                    flags.append(f"--output_vcf=/{_binding}/{_vcf_output}")
                     flags.append(f"--output_gvcf=/{_binding}/{v}")
+
+                    # If user provided a different value for "gvcf_gq_binsize", update the flags given to DeepVariant
+                    if "gvcf_gq_binsize" in _model_config.keys() and _model_config["gvcf_gq_binsize"] != 5: 
+                        _make_examples_args.append(f"gvcf_gq_binsize={_model_config["gvcf_gq_binsize"]}")
+                else:
+                    flags.append(f"--output_vcf=/{_binding}/{v}")
+
             elif "pop" in k:
-                _make_examples_args.append(
-                    ["use_allele_frequency=true", f"population_vcfs=/{_binding}/{v}"]
-                )
-                # flags.append(f'--make_examples_extra_args="use_allele_frequency=true,population_vcfs=/{_binding}/{v}"')
+                _make_examples_args.append("use_allele_frequency=true")
+                _make_examples_args.append(f"population_vcfs=/{_binding}/{v}")
             else:
                 print("UNEXPECTED FLAG NAME FOUND!")
                 breakpoint()
+
+        # Add non-default flags based on user inputs
+        if len(_make_examples_args) > 1:
+            _ex_flags_str = ",".join(_make_examples_args)
+            flags.append(f'--make_examples_extra_args="{_ex_flags_str}"')
+
+        if len(_call_variants_args) > 1:
+            _call_flags_str = ",".join(_call_variants_args)
+            flags.append(f'--call_variants_extra_args="{_call_flags_str}"')
+
+        if len(_post_process_args) > 1:
+            _post_flags_str = ",".join(_post_process_args)
+            flags.append(f'--postprocess_variants_extra_args="{_post_flags_str}"')
 
         # Add a flag to control where temp files are stored (i.e., not TMPDIR)
         flags.append(f"--intermediate_results_dir=/temp_path/")

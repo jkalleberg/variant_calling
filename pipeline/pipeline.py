@@ -75,9 +75,38 @@ class Pipeline:
             _default_output = genome.pipeline_inputs._configs[genome._model_type][
                 "default_output"
             ]
-            if self.pipeline_inputs.cl_inputs.overwrite:
+
+            _use_warning = False
+            if self.pipeline_inputs.cl_inputs.dry_run_mode:
+                if _default_output.file_exists:
+                    if self.pipeline_inputs.cl_inputs.overwrite:
+                        _info = "--overwrite=True, pretending to re-write the existing"
+                    else:
+                        _info = "--overwrite=False, pretending to re-write the existing"
+                else:
+                    _info = "pretending to write a new"
+            else:
+                if (
+                    _default_output.file_exists
+                    and not self.pipeline_inputs.cl_inputs.overwrite
+                ):
+                    _info = "--overwrite=False, unable to re-write an existing"
+                    _use_warning = True
+                elif (
+                    _default_output.file_exists
+                    and self.pipeline_inputs.cl_inputs.overwrite
+                ):
+                    _info = "--overwrite=True, re-writing the existing"
+                else:
+                    _info = "writing a new"
+
+            if _use_warning:
+                self.pipeline_inputs.cl_inputs.logger.warning(
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: {_info} output file | '{_default_output.file_name}'"
+                )
+            else:
                 self.pipeline_inputs.cl_inputs.logger.info(
-                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=True; re-writing the existing output file | '{_default_output.file_name}'"
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: {_info} output file | '{_default_output.file_name}'"
                 )
 
         genome.init_science(get_help=get_help)
