@@ -93,15 +93,18 @@ class Genome:
 
         self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg} - [{self._sample_num}-of-{self.pipeline_inputs._total_num_genomes} {_info}]"
 
-    def set_outputs(self, verbose: bool = False, format: str = "vcf") -> None:
+    def set_outputs(self, verbose: bool = False) -> None:
         """
         Defines the expected file(s).
         """
         if "deepvariant" in self._model_type.lower():
-            if "g." in format:
+            if "g." in self.pipeline_inputs._configs[self._model_type]["output_type"]:
                 _extension = "g.vcf.gz"
             else:
                 _extension = "vcf.gz"
+            
+            # print("EXTENSION:", _extension.upper())
+            # breakpoint()
 
             _output = self._sample_dir / f"{self._sample_id}.{_extension}"
 
@@ -121,7 +124,7 @@ class Genome:
         else:
             _default_output.check_status()
 
-        if self.pipeline_inputs.cl_inputs.args.get_help is False:
+        if self.pipeline_inputs._get_help is False:
             if _default_output.file_exists:
                 # Uncomment if adding the "check_outputs" flag
                 # # If only "checking outputs", skip the remaining steps
@@ -223,14 +226,15 @@ class Genome:
                 self.pipeline_inputs.cl_inputs.create_a_dir(self._reports_dir, updated_log_msg=self._log_msg)
             elif self._model_type == "deepvariant":
                 self._pop_vcf = TestFile(
-                    file=Path(self.pipeline_inputs.cl_inputs.args.pop_file).resolve(),
+                    file=self.pipeline_inputs._configs["deepvariant"]["pop_file"],
                     logger=self.pipeline_inputs.cl_inputs.logger)
 
                 self._pop_vcf.check_existing()
 
+                _config_file = self.pipeline_inputs._configs["deepvariant"]["config_path"]
                 if not self._pop_vcf.file_exists:
                     self.pipeline_inputs.cl_inputs.logger.info(
-                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease update --allele-freq to include an existing PopVCF.\nExiting now...",
+                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease include an existing PopVCF by updating 'pop_file' within the config file | '{_config_file}'.\nExiting now...",
                     )
                     exit(1)
             else:
@@ -382,7 +386,7 @@ class Genome:
             # SKIP FOR GET_HELP()
             return
         elif len(self.pipeline_inputs._configs.keys()) == 1:
-            
+
             # Set model_type
             self._model_type = list(self.pipeline_inputs._configs.keys())[0]
 
@@ -393,13 +397,8 @@ class Genome:
                 return
                 # self._outputs = PostProcessVCF(genome=self)
             else:
-                # Uncomment to use vcfs (with DeepVariant only)
-                # self.set_outputs(verbose=True)
-
-                # Uncomment to use g.vcfs (with DeepVariant only)
-                print("CONTROL OUTPUT TYPE!! ")
-                breakpoint()
-                self.set_outputs(verbose=True, format="g.vcf")
+                
+                self.set_outputs(verbose=True)
 
                 _default_output = self.pipeline_inputs._configs[self._model_type]["default_output"]
 

@@ -273,7 +273,9 @@ def __init__() -> None:
 
     # Handle custom inputs needed for the generic variant calling pipeline
     _cl_inputs = InputManager(
-        custom_module=run,
+        # custom_module=run,
+        args=run._args,
+        logger=run._logger,
         phase="setup",
     )
     _cl_inputs.update_mode()

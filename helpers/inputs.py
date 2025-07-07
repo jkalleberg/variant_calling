@@ -17,7 +17,9 @@ from natsort import natsorted
 from os import listdir
 
 if TYPE_CHECKING:
-    from helpers.module_builder import CustomModule
+    from argparse import Namespace
+    from logging import Logger
+#     from helpers.module_builder import CustomModule
 
 
 
@@ -27,7 +29,9 @@ class InputManager:
     Save the user-provided inputs for repeated use.
     """
     # required parameters
-    custom_module: "CustomModule"
+    args: "Namespace"
+    logger: "Logger"
+    # custom_module: "CustomModule"
     phase: str
 
     # Internal parameters
@@ -40,8 +44,8 @@ class InputManager:
     _unique_files: List[str] = field(default_factory=list, init=False, repr=False)
 
     def update_mode(self) -> None:
-        self.args = self.custom_module._args
-        self.logger = self.custom_module._logger
+        # self.args = self.custom_module._args
+        # self.logger = self.custom_module._logger
         self.overwrite = self.args.overwrite
         self.debug_mode = self.args.debug
         self.dry_run_mode = self.args.dry_run

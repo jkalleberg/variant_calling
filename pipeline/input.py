@@ -91,6 +91,13 @@ class PipelineInputManager:
                 replace_value=False,
                 verbose=self.cl_inputs.debug_mode,
             )
+            self.cl_inputs.add_to_dict(
+                update_dict=self._configs[_variant_caller],
+                new_key="config_path",
+                new_val=config,
+                replace_value=False,
+                verbose=self.cl_inputs.debug_mode,
+            )
             self._ckpt_paths.append(_ckpt_path)
 
     def check_model_configs(self) -> None:

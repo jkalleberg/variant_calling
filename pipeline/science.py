@@ -106,7 +106,7 @@ class Science:
         if model_version is None:
             _model_version = self.genome.pipeline_inputs._configs[
                 self.genome._model_type
-            ]["version"].split("_")[0]
+            ]["model_version"].split("_")[0]
         else:
             _model_version = model_version
 
@@ -187,7 +187,7 @@ class Science:
 
     def get_help(self, variant_caller: str = "deepvariant", version: str = "1.4.0", type="cpu" ) -> None:
         """
-        Display the help page for the program within the container used (make_examples)
+        Display the help page for the program within the container used.
         """
         self.setup_container(
             model_type=variant_caller, model_version=version, hardware_type=type,
@@ -232,6 +232,14 @@ class Science:
         # Select only the variable names, ignoring the variable paths
         _variable_names = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "name" in key.lower()}
 
+        _make_examples_args = list()
+        _call_variants_args = list()
+        _post_process_args = list()
+        
+        print("LOOK HERE!")
+        print("CONFIGS:", self.genome.pipeline_inputs._configs)
+        breakpoint()
+
         for k,v in _variable_names.items():
             _k_prefix = k.split("_")[0]
             _binding = f"{_k_prefix}_path"
@@ -244,12 +252,14 @@ class Science:
             elif "reads" in k:
                 flags.append(f"--reads=/{_binding}/{v}")
             elif "output" in k:
+                flags.append(f"--output_vcf=/{_binding}/{v}")
                 if "g." in v:
                     flags.append(f"--output_gvcf=/{_binding}/{v}")
-                else:
-                    flags.append(f"--output_vcf=/{_binding}/{v}")
             elif "pop" in k:
-                flags.append(f'--make_examples_extra_args="use_allele_frequency=true,population_vcfs=/{_binding}/{v}"') 
+                _make_examples_args.append(
+                    ["use_allele_frequency=true", f"population_vcfs=/{_binding}/{v}"]
+                )
+                # flags.append(f'--make_examples_extra_args="use_allele_frequency=true,population_vcfs=/{_binding}/{v}"')
             else:
                 print("UNEXPECTED FLAG NAME FOUND!")
                 breakpoint()
