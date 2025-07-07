@@ -1,0 +1,11 @@
+{
+    "model_type": "deepvariant",
+    "model_version": "1.4.0",
+    "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_withAF_bovid/model.ckpt-282383",
+    "pop_file": "../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
+    "get_help": false,
+    "output_type": "g.vcf",
+    "keep_vcf": false,
+    "gvcf_gq_binsize": 10,
+    "cnn_homref_call_min_gq": 20
+}
