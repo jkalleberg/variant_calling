@@ -68,33 +68,75 @@ class Science:
     #         f"python3 ../cue/engine/call.py --data_config {str(self.genome._data_yaml)} --model_config {str(self.genome._model_yaml)}",
     #     ]
 
-    def setup_container(self, type: str = "CPU") -> None:
+    def setup_container(self, model_type: Union[None, str] = None, model_version: Union[None, str] = None, hardware_type: str = "cpu") -> None:
         """
         Determine which Apptainer container to use.
 
-        NOTE: Much match the hardware requested via SLURM in --resource-config.
-        """        
-        if self.genome._model_type == "DeepVariant":
-            _input_version = self.genome.pipeline_inputs.variant_callers[self.genome._model_type]["version"].split("_")[0]
+        NOTE: hardware_type value must match the requested via SLURM in --resource-config.
+        """
+        # Define valid options for model_type
+        _valid_models = ["deepvariant", "deeptrio"]
+        _valid_models_str = ",".join(_valid_models)
 
-            # Matches any character that is NOT a letter or a space
-            # (i.e., it keeps digits and special characters)
-            self._version = "".join(re.findall(r'[^a-zA-Z\s]', _input_version))
+        # Define valid options for model_version
+        _valid_versions = ["1.4.0"]
+        _valid_versions_str = ",".join(_valid_versions)
 
-            if type == "GPU":
-                self._container = f"{self.genome._model_type.lower()}_{self._version}-gpu.sif"
-            else:
-                self._container = f"deepvariant_{self._version}.sif"
-        elif self.genome._model_type == "DeepTrio":
-            if type == "GPU":
-                self._container = f"deepvariant_deeptrio-{self._version}-gpu.sif"
-            else:
-                self._container = f"deepvariant_deeptrio-{self._version}.sif"
-        elif self.genome._model_type == "Cue":
-            print("SET THE FORMAT FOR CUE'S CONTAINER")
+        # Define valid options for hardware_type
+        _valid_hardware = ["cpu", "gpu"]
+        _valid_hardware_str = ",".join(_valid_versions)
+
+        # MODEL TYPE --------------------------------------
+        if model_type is None:
+            _model_type = self.genome._model_type.lower()
+        else:
+            _model_type = model_type.lower()
+
+        assert (_model_type in _valid_models), f"invalid model_type ({_model_type}); please enter one of the following: {_valid_models_str}"
+
+        if _model_type == "deepvariant":
+            _container_prefix = _model_type
+        elif _model_type == "deeptrio":
+            _container_prefix = "deepvariant_deeptrio"
+        else:
+            print("UNEXPECTED MODEL TYPE FOUND!")
             breakpoint()
 
-        self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: using the {type} container | '{self._container}'")
+        # MODEL VERSION --------------------------------------
+        if model_version is None:
+            _model_version = (
+                self.genome.pipeline_inputs.variant_callers[self.genome._model_type][
+                    "version"
+                ].split("_")[0]
+            )
+        else:
+            _model_version = model_version
+
+        # Matches any character that is NOT a letter or a space
+        # (i.e., it keeps digits and special characters)
+        self._version = "".join(re.findall(r'[^a-zA-Z\s]', _model_version))
+        _version_str = f"_{self._version}"
+
+        assert (
+            _model_version in _valid_versions
+        ), f"invalid model_version ({self._version}); please enter one of the following: {_valid_versions_str}"
+
+        # HARDWARE TYPE --------------------------------------
+        assert (
+            hardware_type in _valid_hardware
+        ), f"invalid hardware_type ({hardware_type}); please enter one of the following: {_valid_hardware_str}"
+
+        if hardware_type == "gpu":
+            _container_suffix = "-gpu.sif"
+        elif hardware_type == "cpu":
+            _container_suffix = ".sif"
+        else:
+            print("UNEXPECTED HARDWARE TYPE!")
+            breakpoint()
+
+        self._container = f"{_container_prefix}{_version_str}{_container_suffix}"
+
+        self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: using the {hardware_type.upper()} container | '{self._container}'")
 
     def create_bindings(self) -> None:
         """
@@ -145,16 +187,35 @@ class Science:
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
             self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: number of {_label} processing units | '{self._nproc}'")  
 
-    def get_help(self) -> None:
+    def get_help(self, variant_caller: str = "deepvariant", version: str = "1.4.0", type="cpu" ) -> None:
         """
         Display the help page for the program within the container used (make_examples)
         """
-        self.setup_container()
+        self.setup_container(
+            model_type=variant_caller, model_version=version, hardware_type=type,
+        )
+        if variant_caller.lower() == "deepvariant":
+            # Uncomment for make_examples only
+            # _cmd = ["/opt/deepvariant/bin/make_examples", "--helpfull"]
+
+            # Uncomment for call_variants only
+            # _cmd = ["/opt/deepvariant/bin/call_variants", "--helpfull"]
+            
+            # Uncomment for postprocess_variants only
+            # _cmd = ["/opt/deepvariant/bin/postprocess_variants", "--helpfull"]
+
+            # Uncomment for generic flags in single-command mode
+            _cmd = ["/opt/deepvariant/bin/run_deepvariant", "--helpfull"]
+
+        elif variant_caller.lower() == "deeptrio":
+            _cmd = ["/opt/deepvariant/bin/deeptrio/run_deeptrio", "--helpfull"]
+        else:
+            print("INVALID VARIANT CALLER DETECTED:", variant_caller)
+            breakpoint()
+
         get_help = Client.execute(  # type: ignore
             self._container,
-            # Uncomment for DeepTrio
-            # ["/opt/deepvariant/bin/deeptrio/run_deeptrio", "--helpfull"],
-            ["/opt/deepvariant/bin/run_deepvariant", "--helpfull"],
+            _cmd,
             bind=[self._base_binding],
         )
         print(get_help["message"])

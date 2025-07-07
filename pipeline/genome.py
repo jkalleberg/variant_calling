@@ -448,6 +448,18 @@ class Genome:
         Setup the executable lines of science within an SBATCH.
         """
         self._science = Science(genome=self)
+        if get_help:
+            try:
+                self._science.get_help(
+                    variant_caller="deepvariant",
+                    version="1.4.0",
+                    type="cpu",
+                    )
+                exit(0)
+            except AssertionError as e:
+                self.pipeline_inputs.cl_inputs.logger.error(
+                    f"{self._log_msg}: {e}\nExiting...")
+                exit(1)
 
         # Uncomment to enable per-chrom optimization
         # self._science = Science(genome=self, chr_name=self._chrom)
@@ -461,12 +473,7 @@ class Genome:
             or self._science._job_file.file_exists is False # missing an existing SBATCH
             or self.pipeline_inputs.cl_inputs.overwrite # intending to re-write the SBATCH file
             ):
-
-            if "deepvariant" in self._model_type.lower():
-                if get_help:
-                    self._science.get_help()
-                    exit(0)
-                else:
+                if "deepvariant" in self._model_type.lower():
                     self._science.build_deepvariant_cmd()
 
                 # Review the newly created BASH command(s)
@@ -480,13 +487,13 @@ class Genome:
                         f"{self._log_msg}: ----------------------------------------------------")
                     breakpoint()
 
-            # Uncomment to use Cue
-            # if "cue" in self._model_type.lower():
-            #     self._science.build_cue_cmd()
+                # Uncomment to use Cue
+                # if "cue" in self._model_type.lower():
+                #     self._science.build_cue_cmd()
 
-            # Add any existing BASH command line commands to the SCIENCE contents
-            if self._new_lines:
-                self._science.update_command(cmd_list=self._new_lines)
+                # Add any existing BASH command line commands to the SCIENCE contents
+                if self._new_lines:
+                    self._science.update_command(cmd_list=self._new_lines)
         else:
             self.pipeline_inputs.cl_inputs.logger.warning(
                 f"{self._log_msg}: --overwrite=False, skipping variant caller command building | '{self._science._job_file.path}'")

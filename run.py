@@ -143,11 +143,11 @@ def __init__() -> None:
             ### NO --allele-freq with default ckpt will break!
             "--allele-freq",
             "../TRIOS_220704/POPVCF/UMAG1.POP.FREQ.vcf.gz",
-            "--dry-run",
+            # "--dry-run",
             # "--debug",
             "--overwrite",
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
-            # "--get-help",
+            "--get-help",
             
             # THESE DO NOT WORK YET!
             # "--submit-size",
