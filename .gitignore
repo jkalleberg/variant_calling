@@ -8,6 +8,10 @@
 miniconda_envs/
 mamba_envs/
 
+# Ignore vscode settings
+/.vscode/
+.vscode/*
+
 # Ignore Apptainer containers
 /APPTAINER_CACHE/
 /APPTAINER_TMPDIR/
