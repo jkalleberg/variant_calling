@@ -320,6 +320,7 @@ class File:
             _msg = self.cl_inputs.logger_msg
 
         _use_warning = False
+        
         if self.cl_inputs.dry_run_mode:
             if self._test_file.file_exists:
                 if self.cl_inputs.overwrite:

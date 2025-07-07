@@ -122,7 +122,7 @@ def __init__() -> None:
             "--reference",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
             "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
-            # "--dry-run",
+            "--dry-run",
             # "--debug",
             "--overwrite",
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
@@ -273,7 +273,6 @@ def __init__() -> None:
 
     # Handle custom inputs needed for the generic variant calling pipeline
     _cl_inputs = InputManager(
-        # custom_module=run,
         args=run._args,
         logger=run._logger,
         phase="setup",
@@ -344,7 +343,7 @@ def __init__() -> None:
     _cl_inputs.phase = f"variant_calling"
     _cl_inputs.create_logging_msg()
 
-    # Begin to iterate through all the samples
+    # Begin to iterate through all the samples    
     _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs,
                                  submit_size=_cl_inputs.args.submit_size)
     _group_of_samples.process_cohort()
