@@ -151,6 +151,10 @@ class CustomModule:
 
             # Resolve potential relative path entered
             _resolved_out_path = Path(self._args.out_path).resolve()
+
+            # Prevent the user from writing lots of variant calling output files within the Github directory
+            assert _resolved_out_path != Path.cwd(), f"unable to save outputs within the current working directory;\nPlease update --output-path to a different location outside the git repository | '{Path.cwd()}'"
+
             self._args.out_path = _resolved_out_path
 
         assert (
