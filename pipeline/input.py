@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 from helpers.files import TestFile, File
 from helpers.wrapper import timestamp
-from helpers.utils import check_if_all_same, find_NaN, find_not_NaN
+from helpers.utils import check_if_all_same, find_NaN, find_not_NaN, partial_match_case_insensitive, check_if_all_same
 
 
 @dataclass
@@ -32,11 +32,14 @@ class PipelineInputManager:
     """
     # required parameters
     cl_inputs: "InputManager"
-    variant_callers: Dict[str, Dict[str, str]]
 
     # internal parameters
     _all_genomes: Dict[int, List[str]] = field(default_factory=dict, init=False, repr=False)
     _chr_names: List[str] = field(default_factory=list, init=False, repr=False)
+    _ckpt_list: List[str] = field(default_factory=list, init=False, repr=False)
+    _config_dicts: List[Dict[str, str]] = field(
+        default_factory=list, init=False, repr=False
+    )
     _num_chrs: int = field(default=0, init=False, repr=False)
     _total_num_rows: int = field(default=0, init=False, repr=False) 
     _total_num_genomes: int = field(default=0, init=False, repr=False)
@@ -45,6 +48,140 @@ class PipelineInputManager:
 
     def __post_init__(self) -> None:
         self.track_resources = self.cl_inputs.args.benchmark
+
+    def load_model_configs(self) -> None:
+        """
+        Iterate through a list of JSON config file(s), and save the values as a list of dictionaries.
+        """
+        for config in self.args.model_config:
+            # if self.debug_mode:
+            self.logger.info(
+                f"{self.logger_msg}: loading a new model config file | '{config}'"
+            )
+            with open(str(config), mode="r") as file:  # type: ignore
+                _config_dict = load(file)
+
+            # Confirm the minimum viable parameters are found in the config file
+            _required_keys = ["model_type", "model_version", "checkpoint_prefix"]
+            _required_keys_str = ",".join(_required_keys)
+            assert set(_required_keys).issubset(
+                _config_dict.keys()
+            ), f"unexpected config file format; missing at least one required parameter ({_required_keys_str}) | '{config}'"
+
+            self._config_dicts.append(_config_dict)
+            self._ckpt_list.append(_config_dict["model_type"])
+
+    def check_model_configs(self) -> None:
+        """
+        Confirm that the contents of all config files meet expectations.
+        """
+
+        # Check for supported variant callers
+        self._use_deepvariant = partial_match_case_insensitive(
+            "deepvariant", self._ckpt_list
+        )
+        self._use_deeptrio = partial_match_case_insensitive("deeptrio", self._ckpt_list)
+        self._use_cue = partial_match_case_insensitive("cue", self._ckpt_list)
+
+        # Confirm at least one supported variant caller was provided
+        _checkpoints_entered = ",".join(self._ckpt_list)
+        _no_valid_checkpoint = check_if_all_same([_use_deepvariant, _use_cue], None)
+        assert (
+            _no_valid_checkpoint is False
+        ), f"unable to find a supported checkpoint (e.g., DeepVariant or Cue) | '{_checkpoints_entered}'"
+
+        # Get the expected default checkpoint path (custom bovid-trained WGS AF)
+        _default_ckpt_prefix = Path(
+            "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_withAF_bovid/model.ckpt-282383"
+        ).resolve()
+
+        print("CONFIG DICTS:", self._config_dicts)
+        print("CKPT LIST:", self._ckpt_list)
+        print("DEFAULT CKPT:", _default_ckpt_prefix)
+        breakpoint()
+
+        # # Create an empty list to store valid checkpoint paths
+        # _list_of_ckpt_prefixes = list()
+
+        # if _use_deepvariant and len(_use_deepvariant) == 1:
+
+        #     # Get the value of 'BIN_VERSION_DV', return None if not set
+        #     _dv_version = getenv("BIN_VERSION_DV")
+
+        #     # Confirm this environment variable exists
+        #     assert (
+        #         _dv_version is not None
+        #     ), f"missing [REQUIRED] environment variable: ($BIN_VERSION_DV); Please double check that this variable is included in your modules.sh file"
+
+        #     # Do not allow the user to deviate from v1.4.0
+        #     assert (
+        #         _dv_version == "1.4.0"
+        #     ), f"invalid environment variable ($BIN_VERSION_DV); Please edit your modules.sh file to use the expected version of DeepVariant"
+        #     # NOTE: In future, newer versions may become supported, but as they are untested, we do not encourage deviating from this expectation.
+
+        #     # Identify the DeepVariant checkpoint prefix entered
+        #     _user_ckpt_prefix = Path(_use_deepvariant[0]).resolve()
+
+        #     # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383),
+        #     if _user_ckpt_prefix == _default_ckpt_prefix:
+
+        #         # If so, make the flag --allele-freq [REQUIRED]
+        #         assert (
+        #             run._args.pop_file
+        #         ), "missing [REQUIRED] flag: --allele-freq; Please add a PopVCF to use the custom bovine-trained checkpoint (model.ckpt-282383)"
+
+        #         # Resolve any relative path entered for --allele-freq
+        #         _resolved_pop_path = Path(run._args.pop_file).resolve()
+
+        #         # Confirm the PopVCF file is available
+        #         assert (_resolved_pop_path.is_file() is True), f"unable to find the PopVCF file | '{_resolved_pop_path}'"
+        #         run._args.pop_file = _resolved_pop_path
+
+        #         _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
+
+        #     else:
+        #         print("ADD LOGIC FOR DIFFERENT DEEPVARIANT CHECKPOINTS")
+        #         breakpoint()
+
+        #     # Confirm that all the expected DeepVariant v1.4 checkpoint files are available
+        #     _checkpoint_files = iterdir_with_prefix(
+        #         absolute_path=_user_ckpt_prefix.parent,
+        #         prefix=_user_ckpt_prefix.name,
+        #         valid_suffixes=[".data-00000-of-00001", ".json", ".index", ".meta",],
+        #         )
+
+        #     assert (len(_checkpoint_files) == 4), f"unable to find all four DeepVariant checkpoint files | '{_user_ckpt_prefix}'"
+
+        # if _use_cue:
+        #     print("ADD LOGIC CUE CHECKPOINT")
+        #     breakpoint()
+
+        # # Confirm that a model checkpoint was entered
+        # assert (len(_list_of_ckpt_prefixes) >= 1), f"unable to find at least one valid checkpoint | '{_user_ckpt_prefix}'"
+
+        # # Save the list as a new command-line argument
+        # run._args.model_prefix = _list_of_ckpt_prefixes
+
+        # Determine the variant caller(s) requested by the user
+        # Currently supported valid options:
+        #   DeepVariant v1.4.0
+        # In future, we plan to support:
+        #   DeepVariant v1.5.0+
+        #   DeepTrio v1.5.0
+        #   Cue v####
+        # NOTE: this process expects the input checkpoint to be formatted as:
+        #       ./tutorial/existing_ckpts/<MODEL_TYPE>/<MODEL_VERSION>/<CHECKPOINT_NAME>
+
+        # Save info about the model(s) requested
+        # _variant_callers = dict()
+        # for ckpt in _ckpt_list:
+        #     _checkpoint_path = Path(ckpt).resolve()
+        #     _model_type = _checkpoint_path.parent.parent.name
+        #     _model_version = _checkpoint_path.parent.name
+        #     _checkpoint_name = _checkpoint_path.name
+        #     _variant_callers[_model_type] = {"version": _model_version,
+        #                                      "checkpoint_name": _checkpoint_name,
+        #                                      "checkpoint_path": _checkpoint_path.parent}
 
     def find_ref_dict(self) -> None:
         """

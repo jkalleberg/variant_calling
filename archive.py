@@ -65,8 +65,9 @@ def __init__() -> None:
 
     # Handle command-line inputs needed
     _cl_inputs = InputManager(
-        args=archive._args,
-        logger=archive._logger,
+        custom_module=archive,
+        # args=archive._args,
+        # logger=archive._logger,
         phase="archive",
     )
     _cl_inputs.update_mode()

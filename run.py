@@ -261,7 +261,7 @@ def __init__() -> None:
             assert (
                 config.is_file()
             ), f"missing a --model-config file | '{config}'.\nPlease provide the path to at least one existing model config (.JSON) file."
-        
+
         # Update the command line args to be a list of Path() objects
         run._args.model_config = _resolved_configs
 
@@ -274,8 +274,7 @@ def __init__() -> None:
 
     # Handle custom inputs needed for the generic variant calling pipeline
     _cl_inputs = InputManager(
-        args=run._args,
-        logger=run._logger,
+        custom_module=run,
         phase="setup",
     )
     _cl_inputs.update_mode()
@@ -289,14 +288,18 @@ def __init__() -> None:
     _cl_inputs.load_slurm_resources()
     # TO DO: add a check_resources function to make sure format is correct?
 
-    _cl_inputs.load_model_config()
+    # Prepare pipeline-specific inputs
+    _pipeline_inputs = PipelineInputManager(cl_inputs=_cl_inputs)
+
+    # Load in the list of model config file(s)
+    try:
+        _pipeline_inputs.load_model_configs()
+    except AssertionError as error:
+        run._logger.error(f"{run._logger_msg}: {error}.\nExiting... ")
+        exit(1)
 
     print("HALT!")
     breakpoint()
-
-    # Prepare pipeline-specific inputs
-    _pipeline_inputs = PipelineInputManager(cl_inputs=_cl_inputs,
-                                            variant_callers=_variant_callers)
 
     # Create a PICARD reference .dict file, if necessary
     _pipeline_inputs.find_ref_dict()
