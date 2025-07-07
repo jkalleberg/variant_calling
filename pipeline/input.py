@@ -268,12 +268,12 @@ class PipelineInputManager:
 
     def count_inputs(self) -> None:
         """
-        Quickly confirm the number of BAM/CRAM rows in the input file.
+        Quickly confirm the number of rows in the input file.
         """
         try:
             if self.cl_inputs.debug_mode:
                 self.cl_inputs.logger.debug(
-                    f"{self.cl_inputs.logger_msg}: identifying the number of BAM/CRAM inputs provided.",
+                    f"{self.cl_inputs.logger_msg}: identifying the number of inputs provided.",
                 )
             # Creating a .dict file with Picard
             _result = run(
@@ -289,7 +289,7 @@ class PipelineInputManager:
             self._total_num_rows = int(_result.stdout.split(" ")[0])
 
             self.cl_inputs.logger.info(
-                    f"{self.cl_inputs.logger_msg}: number of potential BAM/CRAM files to process | {self._total_num_rows:,}",
+                    f"{self.cl_inputs.logger_msg}: number of potential files to process | {self._total_num_rows:,}",
                 )
 
         except CalledProcessError as err:
@@ -338,12 +338,12 @@ class PipelineInputManager:
 
     def check_sample(self, index: int, sample_id: str, file: str, manual_review: bool = False) -> Union[Dict[int, List[str]], None]:
         """
-        Confirm that all input BAM/CRAM files are pre-existing.
+        Confirm that all input files are pre-existing.
         
         Returns:
-            None: indicates that the user-provided BAM/CRAM file provided does not exist.
+            None: indicates that the user-provided file could not be found.
             Dict[int, List[str]: indicates a valid BAM/CRAM file was provided:
-                format = {row#: [sampleID, absolute path to existing BAM/CRAM file(s) from the CSV input]}
+                format = {row#: [sampleID, absolute path to an existing, indexed BAM/CRAM file]}
         """
         if manual_review and self.cl_inputs.debug_mode:
             get_status = 100
@@ -359,24 +359,33 @@ class PipelineInputManager:
             self.cl_inputs.logger.error(
                 f"{self.cl_inputs.logger_msg}: missing input file for sample | '{sample_id}'"
             )
+            return
         else:
             # Using lambda function to check if string contains any element from list
             _contains_word = lambda s, l: any(map(lambda x: x in s, l))
 
             valid_file_types = ["bam", "cram"]
+            _valid_file_types_str = "/".join([f.upper() for f in valid_file_types])
 
             if _contains_word(file, valid_file_types):
+                # Define the input file components to variables
                 file_path = Path(str(file))
                 file_parent = Path(file_path.parent)
                 file_stem = file_path.stem
                 file_ext = file_path.suffix.strip(".")
 
                 try:
+                    # Confirm the input file exists already
                     assert (
                         file_path.exists()
                     ), f"non-existent {file_ext.upper()} provided | '{file}'"
 
-                    return {index: [sample_id, str(file)]}
+                    # Assuming the input file exists,
+                    # Confirm user provided a BAM/CRAM input
+                    if file_ext.lower() not in valid_file_types:
+                        raise FileNotFoundError(f"invalid file type provided | '{file}'")
+
+                    _validated_input = file_path
 
                 except AssertionError:
                     if file_ext.lower() == valid_file_types[0]:
@@ -385,7 +394,7 @@ class PipelineInputManager:
                         new_ext = valid_file_types[0]
                     else:
                         self.cl_inputs.logger.warning(
-                            f"{self.cl_inputs.logger_msg}: missing a valid file extension {valid_file_types} for input file | '{file}'...SKIPPING AHEAD"
+                            f"{self.cl_inputs.logger_msg}: missing a valid file extension ({_valid_file_types_str}) for input file | '{file}'...SKIPPING AHEAD"
                         )
                         return
 
@@ -401,19 +410,49 @@ class PipelineInputManager:
                                 f"{self.cl_inputs.logger_msg}: updating file extension | '{file_path.name}' -> '{alternative_input.name}'\nPress (c) to continue:"
                             )
                             breakpoint()
-                        return {index: [sample_id, str(alternative_input)]}
+
+                        _validated_input = alternative_input
 
                     except AssertionError as e:
                         self.cl_inputs.logger.warning(e)
                         self.cl_inputs.logger.warning(
-                            f"{self.cl_inputs.logger_msg}: unable to find input file with either BAM/CRAM extension for sample | '{sample_id}'"
+                            f"{self.cl_inputs.logger_msg}: unable to find input file with a valid extension ({_valid_file_types_str}) for sample | '{sample_id}'...SKIPPING AHEAD"
                         )
                         return
             else:
                 self.cl_inputs.logger.warning(
-                    f"{self.cl_inputs.logger_msg}: missing a valid file extension {valid_file_types} for input file | '{file}'...SKIPPING AHEAD"
+                    f"{self.cl_inputs.logger_msg}: missing a valid file extension ({_valid_file_types_str}) for input file | '{file}'...SKIPPING AHEAD"
                 )
                 return
+
+            # Assuming the input file is a BAM/CRAM file,
+            # Define the required index file components as variables
+            _validated_parent = Path(_validated_input.parent)
+            _validated_stem = _validated_input.stem
+            _validated_ext = _validated_input.suffix.strip(".")
+            if _validated_ext.lower() == valid_file_types[0]:
+                index_type = "bai"
+            elif _validated_ext.lower().lower() == valid_file_types[1]:
+                index_type = "crai"
+
+            _index_file = _validated_parent / f"{_validated_stem}.{_validated_ext}.{index_type}"
+
+            # Confirm the input file's index exists already
+            try:
+                assert (
+                    _index_file.is_file()
+                ), f"non-existent {index.upper()} provided | '{file}'" 
+            except AssertionError as e:
+                self.cl_inputs.logger.warning(e)
+                self.cl_inputs.logger.warning(
+                    f"{self.cl_inputs.logger_msg}: unable to find the index file for sample | '{sample_id}'"
+                )
+                print("TO DO: add a samtools sort + samtools index command here?")
+                breakpoint()
+                return
+
+            # Assuming all inputs are valid, define the inputs to pass to Genome()
+            return {index: [sample_id, str(_validated_input)]}
 
     def process_input_file(self) -> None:
         """

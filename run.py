@@ -147,7 +147,7 @@ def __init__() -> None:
             # "--debug",
             "--overwrite",
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
-            "--get-help",
+            # "--get-help",
             
             # THESE DO NOT WORK YET!
             # "--submit-size",
