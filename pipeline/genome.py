@@ -56,7 +56,6 @@ class Genome:
     _tmp_dir: Union[None, Path] = field(default=None, init=False, repr=False)  
     _variables: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
-    # _default_output: Union[None, "File"] = field(default=None, init=False, repr=False)
     # _missing_output: bool = field(default=True, init=False, repr=False)
     # _check_dict: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     # # _chrom: Union[str, None] = field(default=None, init=False, repr=False)
@@ -64,9 +63,6 @@ class Genome:
     #     default_factory=dict, init=False, repr=False
     # )
 
-    # _model_dict: Dict[str, Union[str, int, List[str]]] = field(
-    #     default_factory=dict, init=False, repr=False
-    # )
 
     # _paths_found: List[Union[str, None]] = field(
     #     default_factory=list, init=False, repr=False
@@ -102,9 +98,6 @@ class Genome:
                 _extension = "g.vcf.gz"
             else:
                 _extension = "vcf.gz"
-            
-            # print("EXTENSION:", _extension.upper())
-            # breakpoint()
 
             _output = self._sample_dir / f"{self._sample_id}.{_extension}"
 

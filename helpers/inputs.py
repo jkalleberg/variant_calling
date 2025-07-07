@@ -5,8 +5,6 @@ description: handler for generic command line inputs
 example usage: from helpers.inputs import InputManager
 
 """
-# from argparse import Namespace
-# from logging import Logger
 from dataclasses import dataclass, field
 from pathlib import Path
 from json import load
@@ -19,9 +17,6 @@ from os import listdir
 if TYPE_CHECKING:
     from argparse import Namespace
     from logging import Logger
-#     from helpers.module_builder import CustomModule
-
-
 
 @dataclass
 class InputManager:
@@ -31,7 +26,6 @@ class InputManager:
     # required parameters
     args: "Namespace"
     logger: "Logger"
-    # custom_module: "CustomModule"
     phase: str
 
     # Internal parameters
@@ -44,8 +38,6 @@ class InputManager:
     _unique_files: List[str] = field(default_factory=list, init=False, repr=False)
 
     def update_mode(self) -> None:
-        # self.args = self.custom_module._args
-        # self.logger = self.custom_module._logger
         self.overwrite = self.args.overwrite
         self.debug_mode = self.args.debug
         self.dry_run_mode = self.args.dry_run
