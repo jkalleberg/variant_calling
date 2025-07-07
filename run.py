@@ -13,7 +13,6 @@ usage: python3 run.py                                               \
 
 from pathlib import Path
 from sys import path, exit
-from os import getenv
 
 abs_path = Path(__file__).resolve()
 module_path = str(abs_path.parent.parent)
@@ -291,15 +290,33 @@ def __init__() -> None:
     # Prepare pipeline-specific inputs
     _pipeline_inputs = PipelineInputManager(cl_inputs=_cl_inputs)
 
-    # Load in the list of model config file(s)
     try:
+        # Load in the list of model config file(s)
         _pipeline_inputs.load_model_configs()
+
+        # Confirm the model config file(s) match expectations
+        _pipeline_inputs.check_model_configs()
+
+        # produce the manual for DeepVariant
+        if _pipeline_inputs._get_help is True:
+            # Only need to init a Genome() but won't run anything
+            g = tuple([0, [None, None]])
+            _genome = Genome(
+                sample=g,
+                pipeline_inputs=_pipeline_inputs,
+            )
+            _genome.init_genome()
+            _group_of_samples = Pipeline(
+                pipeline_inputs=_pipeline_inputs,
+                submit_size=_cl_inputs.args.submit_size,
+            )
+            _group_of_samples.process_genome(
+                genome=_genome, get_help=_pipeline_inputs._get_help
+            )
+
     except AssertionError as error:
         run._logger.error(f"{run._logger_msg}: {error}.\nExiting... ")
         exit(1)
-
-    print("HALT!")
-    breakpoint()
 
     # Create a PICARD reference .dict file, if necessary
     _pipeline_inputs.find_ref_dict()
@@ -309,7 +326,7 @@ def __init__() -> None:
     _pipeline_inputs.default_regions_BED()
 
     # Determine how many rows were provided as a single input
-    _pipeline_inputs.count_inputs()    
+    _pipeline_inputs.count_inputs()  
 
     # Define a temp file to save samples to re-run
     # NOTE: this isn't currently used because there isn't a --check-samples flag (yet)
@@ -328,18 +345,7 @@ def __init__() -> None:
     # Begin to iterate through all the samples
     _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs,
                                  submit_size=_cl_inputs.args.submit_size)
-
-    # produce the manual for DeepVariant
-    if _cl_inputs.args.get_help:
-        # Only need to init a Genome() but won't run anything
-        g = tuple(list(_group_of_samples.pipeline_inputs._all_genomes.items())[0])
-        _genome = Genome(
-            sample=g, pipeline_inputs=_group_of_samples.pipeline_inputs,
-            )
-        _genome.init_genome()
-        _group_of_samples.process_genome(genome=_genome, get_help=_cl_inputs.args.get_help)
-    else:
-        _group_of_samples.process_cohort()
+    _group_of_samples.process_cohort()
 
     print("STOP!")
     breakpoint()

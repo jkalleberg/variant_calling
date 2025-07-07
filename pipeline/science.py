@@ -104,11 +104,9 @@ class Science:
 
         # MODEL VERSION --------------------------------------
         if model_version is None:
-            _model_version = (
-                self.genome.pipeline_inputs.variant_callers[self.genome._model_type][
-                    "version"
-                ].split("_")[0]
-            )
+            _model_version = self.genome.pipeline_inputs._configs[
+                self.genome._model_type
+            ]["version"].split("_")[0]
         else:
             _model_version = model_version
 
@@ -194,18 +192,12 @@ class Science:
         self.setup_container(
             model_type=variant_caller, model_version=version, hardware_type=type,
         )
+
+        # print("GET HELP WITH:", self.genome.pipeline_inputs.get_help_with)
+        # breakpoint()
+
         if variant_caller.lower() == "deepvariant":
-            # Uncomment for make_examples only
-            # _cmd = ["/opt/deepvariant/bin/make_examples", "--helpfull"]
-
-            # Uncomment for call_variants only
-            # _cmd = ["/opt/deepvariant/bin/call_variants", "--helpfull"]
-            
-            # Uncomment for postprocess_variants only
-            # _cmd = ["/opt/deepvariant/bin/postprocess_variants", "--helpfull"]
-
-            # Uncomment for generic flags in single-command mode
-            _cmd = ["/opt/deepvariant/bin/run_deepvariant", "--helpfull"]
+            _cmd = [f"/opt/deepvariant/bin/{self.genome.pipeline_inputs.get_help_with}", "--helpfull"]
 
         elif variant_caller.lower() == "deeptrio":
             _cmd = ["/opt/deepvariant/bin/deeptrio/run_deeptrio", "--helpfull"]

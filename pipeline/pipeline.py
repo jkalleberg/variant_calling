@@ -67,18 +67,18 @@ class Pipeline:
         Args:
             prior_jobs (Union[List[Union[str, None]], None], optional): _description_. Defaults to None.
         """
-
-        _default_output = genome.pipeline_inputs.variant_callers[genome._model_type][
-            "default_output"
-        ]
-        if self.pipeline_inputs.cl_inputs.overwrite and self.pipeline_inputs.cl_inputs.args.get_help is False:
+        if get_help:
             self.pipeline_inputs.cl_inputs.logger.info(
-                f"{self.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=True; re-writing the existing output file | '{_default_output.file_name}'"
+                f"{self.pipeline_inputs.cl_inputs.logger_msg}: --get-help=True; viewing internal flags within DeepVariant ({self.pipeline_inputs.get_help_with})"
             )
-        elif self.pipeline_inputs.cl_inputs.args.get_help:
-            self.pipeline_inputs.cl_inputs.logger.info(
-                f"{self.pipeline_inputs.cl_inputs.logger_msg}: --get-help=True; viewing internal flags within DeepVariant"
-            )
+        else:
+            _default_output = genome.pipeline_inputs._configs[genome._model_type][
+                "default_output"
+            ]
+            if self.pipeline_inputs.cl_inputs.overwrite:
+                self.pipeline_inputs.cl_inputs.logger.info(
+                    f"{self.pipeline_inputs.cl_inputs.logger_msg}: --overwrite=True; re-writing the existing output file | '{_default_output.file_name}'"
+                )
 
         genome.init_science(get_help=get_help)
         genome.init_job()
@@ -109,13 +109,13 @@ class Pipeline:
                 f"{self.pipeline_inputs.cl_inputs.logger_msg}: the value for ending_row must be greater than or equal to '{self._starting_row:,}'.\nExiting... "
             )
             exit(1)
-        
+
         # print("STARTING ROW:", self._starting_row)
         # print("ENDING ROW:", self._ending_row)
         # breakpoint()
 
         # How many times will variant calling be performed per-sample?
-        _n_variant_callers = len(self.pipeline_inputs.variant_callers.keys())
+        _n_variant_callers = len(self.pipeline_inputs._configs.keys())
 
         # NOTE: This only works for DeepVariant currently!
         _total_jobs = (_n_variant_callers * self.pipeline_inputs._total_num_genomes)
@@ -129,7 +129,7 @@ class Pipeline:
                 continue
 
             # Iterate through potentially multiple variant callers (e.g., DeepVariant, and Cue)
-            for variant_caller in self.pipeline_inputs.variant_callers.keys():
+            for variant_caller in self.pipeline_inputs._configs.keys():
                 _original_logger_msg = self.pipeline_inputs.cl_inputs.logger_msg 
 
                 lab_id = g[1][0]
@@ -161,7 +161,9 @@ class Pipeline:
                 self.pipeline_inputs.cl_inputs.logger_msg = _updated_logger_msg
 
                 # Check for the expected output file produced by a specific variant caller
-                _default_output = _genome.pipeline_inputs.variant_callers[variant_caller]["default_output"]
+                _default_output = _genome.pipeline_inputs._configs[variant_caller][
+                    "default_output"
+                ]
 
                 # OUTPUT EXISTS!
                 if _default_output.file_exists and not self.pipeline_inputs.cl_inputs.overwrite:
@@ -213,7 +215,7 @@ class Pipeline:
                     else:
                         self._job_ids[i] = None
                         self._skip_counter += 1
-                    
+
                     # print("I:", i)
                     # print("RESULT:", self._result)
                     # print("JOB IDS:", self._job_ids[0:10])
@@ -251,7 +253,7 @@ class Pipeline:
                 #     )
 
                 if self._job_ids:
-                    
+
                     # print("I:", i)
                     # print("ITER:", (i+1))
                     # print("JOB IDS:", self._job_ids[0:10])
@@ -284,12 +286,12 @@ class Pipeline:
                             # print("OVER HERE!")
                             # print("END:", _end)
                             _end = i + self.submit_size
-                            
+
                             _current_job_ids = self._job_ids[i:_end]
                     else: 
                         # print("NOPE, OVER HERE!")
                         _current_job_ids = self._job_ids[self._starting_row:(i+1)]
-                    
+
                     # print("CURRENT JOB IDS:", _current_job_ids)
                     # breakpoint()
 

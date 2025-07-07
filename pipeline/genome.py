@@ -44,7 +44,7 @@ class Genome:
     # internal parameters
     _job_dir: Union[None, Path] = field(default=None, init=False, repr=False)
     _log_dir: Union[None, Path] = field(default=None, init=False, repr=False)
-    _model_type: Union[str, None] = field(default="DeepVariant", init=False, repr=False)
+    _model_type: Union[str, None] = field(default=None, init=False, repr=False)
     _new_lines: List[str] = field(default_factory=list, init=False, repr=False)
     _pickle_file: Union[None, File] = field(default=None, init=False, repr=False)
     _reads_dir: Union[Path, None] = field(default=None, init=False, repr=False)
@@ -83,9 +83,7 @@ class Genome:
 
         if self._sample_id is None:
             self._log_msg = f"{self.pipeline_inputs.cl_inputs.logger_msg}"
-            _info = "UH OH!"
-            print(f"INFO: {_info}")
-            breakpoint()
+            return
         elif self.sample[1][1] is not None:
             self._reads_dir = Path(self.sample[1][1])
             self._resources = self.pipeline_inputs.cl_inputs.resource_dict
@@ -157,7 +155,7 @@ class Genome:
 
         # Add the variant-caller-specific default output File()
         self.pipeline_inputs.cl_inputs.add_to_dict(
-            update_dict=self.pipeline_inputs.variant_callers[self._model_type],
+            update_dict=self.pipeline_inputs._configs[self._model_type],
             new_key="default_output",
             new_val=_default_output,
             replace_value=True,
@@ -185,8 +183,7 @@ class Genome:
         Define paths to frequently used directories.
         """
         if self._sample_id is None:
-            print("UH OH! Spaghetti-Os!")
-            breakpoint()
+            return
         else:
             # Are we creating sub-groups within the larger group?
             if self.group_name is not None:
@@ -221,10 +218,10 @@ class Genome:
             self.pipeline_inputs.cl_inputs.create_a_dir(self._log_dir, updated_log_msg=self._log_msg)
             self.pipeline_inputs.cl_inputs.create_a_dir(self._tmp_dir, updated_log_msg=self._log_msg)
 
-            if self._model_type == "Cue":
+            if self._model_type == "cue":
                 self._reports_dir = self._sample_dir / "reports"
                 self.pipeline_inputs.cl_inputs.create_a_dir(self._reports_dir, updated_log_msg=self._log_msg)
-            elif self._model_type == "DeepVariant":
+            elif self._model_type == "deepvariant":
                 self._pop_vcf = TestFile(
                     file=Path(self.pipeline_inputs.cl_inputs.args.pop_file).resolve(),
                     logger=self.pipeline_inputs.cl_inputs.logger)
@@ -236,6 +233,9 @@ class Genome:
                         f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease update --allele-freq to include an existing PopVCF.\nExiting now...",
                     )
                     exit(1)
+            else:
+                print("MODEL TYPE IS WONKY")
+                breakpoint()
 
     def setup_variables(self) -> None:
         """
@@ -293,14 +293,14 @@ class Genome:
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
             new_key="ckpt_path",
-            new_val=str(self.pipeline_inputs.variant_callers[self._model_type]["checkpoint_path"]),
+            new_val=str(self.pipeline_inputs._configs[self._model_type]["checkpoint_prefix"].parent),
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
         # Add checkpoint prefix to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
             update_dict=self._variables[self._model_type],
             new_key="ckpt_name",
-            new_val=self.pipeline_inputs.variant_callers[self._model_type]["checkpoint_name"],
+            new_val=self.pipeline_inputs._configs[self._model_type]["checkpoint_prefix"].name,
             updated_log_msg=f"{self._log_msg} - [run_{self._model_type}]",
         )
 
@@ -325,7 +325,7 @@ class Genome:
         # --------------------------------------------------
         # Output VCF (perhaps gVCF in the future)
         # --------------------------------------------------
-        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        _default_output = self.pipeline_inputs._configs[self._model_type]["default_output"]
 
         # Add container binding path to model-specific variables
         self.pipeline_inputs.cl_inputs.add_to_dict(
@@ -356,7 +356,7 @@ class Genome:
         # --------------------------------------------------
         # Population VCF -- no genotypes (DeepVariant Only)
         # --------------------------------------------------
-        if self._model_type == "DeepVariant":
+        if self._model_type == "deepvariant":
             # Add container binding path to model-specific variables
             self.pipeline_inputs.cl_inputs.add_to_dict(
                 update_dict=self._variables[self._model_type],
@@ -378,19 +378,30 @@ class Genome:
         """        
         self.get_sample_info()
 
-        if len(self.pipeline_inputs.variant_callers.keys()) == 1:
-            self._model_type = list(self.pipeline_inputs.variant_callers.keys())[0]
+        if len(self.pipeline_inputs._configs.keys()) < 1:
+            # SKIP FOR GET_HELP()
+            return
+        elif len(self.pipeline_inputs._configs.keys()) == 1:
+            
+            # Set model_type
+            self._model_type = list(self.pipeline_inputs._configs.keys())[0]
 
             self.set_paths()
 
-            if self._sample_id is not None:
+            if self._sample_id is None:
+                # SKIP AHEAD FOR GET_HELP()
+                return
+                # self._outputs = PostProcessVCF(genome=self)
+            else:
                 # Uncomment to use vcfs (with DeepVariant only)
                 # self.set_outputs(verbose=True)
 
                 # Uncomment to use g.vcfs (with DeepVariant only)
+                print("CONTROL OUTPUT TYPE!! ")
+                breakpoint()
                 self.set_outputs(verbose=True, format="g.vcf")
 
-                _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+                _default_output = self.pipeline_inputs._configs[self._model_type]["default_output"]
 
                 # self._outputs = PostProcessVCF(genome=self)
                 # self._outputs.check_all_outputs(group_name=self.group_name, verbose=True)
@@ -413,10 +424,6 @@ class Genome:
                 else:
                     print("ALL OUTPUTS DETECTED!")
                     breakpoint()
-            else:
-                print("HELP ME, I'M BROKEN")
-                breakpoint()
-                # self._outputs = PostProcessVCF(genome=self)
         else:
             print("EDIT TO ENABLE MULTIPLE VARIANT CALLERS")
             breakpoint()
@@ -450,9 +457,10 @@ class Genome:
         self._science = Science(genome=self)
         if get_help:
             try:
+                _version = self.pipeline_inputs._configs[self._model_type]["model_version"]
                 self._science.get_help(
-                    variant_caller="deepvariant",
-                    version="1.4.0",
+                    variant_caller=self._model_type,
+                    version=_version,
                     type="cpu",
                     )
                 exit(0)
@@ -466,34 +474,34 @@ class Genome:
 
         self._science.build_job_name()
 
-        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        _default_output = self.pipeline_inputs._configs[self._model_type]["default_output"]
 
         if (
             _default_output.file_exists is False # expect output is missing
             or self._science._job_file.file_exists is False # missing an existing SBATCH
             or self.pipeline_inputs.cl_inputs.overwrite # intending to re-write the SBATCH file
             ):
-                if "deepvariant" in self._model_type.lower():
-                    self._science.build_deepvariant_cmd()
+            if "deepvariant" in self._model_type.lower():
+                self._science.build_deepvariant_cmd()
 
-                # Review the newly created BASH command(s)
-                if self.pipeline_inputs.cl_inputs.debug_mode:
-                    self.pipeline_inputs.cl_inputs.logger.debug(
+            # Review the newly created BASH command(s)
+            if self.pipeline_inputs.cl_inputs.debug_mode:
+                self.pipeline_inputs.cl_inputs.logger.debug(
                         f"{self._log_msg}: SCIENCE COMMAND: -----------------------------------")
-                    for line in self._science._command_list:
-                        self.pipeline_inputs.cl_inputs.logger.debug(
-                        f"{self._log_msg}: {line}")
+                for line in self._science._command_list:
                     self.pipeline_inputs.cl_inputs.logger.debug(
+                        f"{self._log_msg}: {line}")
+                self.pipeline_inputs.cl_inputs.logger.debug(
                         f"{self._log_msg}: ----------------------------------------------------")
-                    breakpoint()
+                breakpoint()
 
-                # Uncomment to use Cue
-                # if "cue" in self._model_type.lower():
-                #     self._science.build_cue_cmd()
+            # Uncomment to use Cue
+            # if "cue" in self._model_type.lower():
+            #     self._science.build_cue_cmd()
 
-                # Add any existing BASH command line commands to the SCIENCE contents
-                if self._new_lines:
-                    self._science.update_command(cmd_list=self._new_lines)
+            # Add any existing BASH command line commands to the SCIENCE contents
+            if self._new_lines:
+                self._science.update_command(cmd_list=self._new_lines)
         else:
             self.pipeline_inputs.cl_inputs.logger.warning(
                 f"{self._log_msg}: --overwrite=False, skipping variant caller command building | '{self._science._job_file.path}'")
@@ -514,34 +522,6 @@ class Genome:
 
         self._slurm_job.create_slurm_job(handler_status_label=f"variant_calling:{self._model_type}")
 
-        # _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
-        # print("DEFAULT OUTPUT:", _default_output.path)
-
-        # print("PICKLE FILE:", self._pickle_file.path)
-        # # self.pipeline_inputs.find_pickled_samples(expect_existing=True)
-        # # print("PICKLE FILE:", self.pipeline_inputs._samples_pickle.path)
-        # breakpoint()
-
-        #### NOTE: These can not follow run_deepvariant with a capture_status
-        ####        opted to run separately to ensure benchmarking reflects only the Variant Calling component
-        # # Create a sample-stats CSV file
-        # self._slurm_job.create_slurm_job(
-        #     handler_status_label=f"get_stats:{self._model_type}",
-        #     content_list=[f"bash scripts/get_stats.sh {_default_output.path}"],
-        # )
-
-        # # Remove temporary files
-        # if self._pickle_file.path.is_file() or self.pipeline_inputs.cl_inputs.dry_run_mode:
-        #     self._slurm_job.create_slurm_job(
-        #         handler_status_label=f"archive:{self._model_type}",
-        #         content_list=[f"python3 archive.py -I {self._pickle_file.path}"],
-        #     )
-
-        # # Add a final line at the end of the SBATCH
-        # self._slurm_job.create_slurm_job(
-        #     content_list=["echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science ends now.'"]
-        # )
-
         # Actually generate the SBATCH file, or pretend to
         if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
             self._slurm_job.display_job()
@@ -559,7 +539,7 @@ class Genome:
         Pass a SBATCH job to the SLURM queue.
         """
 
-        _default_output = self.pipeline_inputs.variant_callers[self._model_type]["default_output"]
+        _default_output = self.pipeline_inputs._configs[self._model_type]["default_output"]
 
         if not self.pipeline_inputs.cl_inputs.dry_run_mode:
             # confirm an SBATCH file actually exists
