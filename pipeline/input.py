@@ -506,10 +506,12 @@ class PipelineInputManager:
         Prevents the user from creating 10,000+ sub-directories within a single output path.
         """
         try:
-            assert (self._total_num_genomes < max_limit), f"exceeded max number of genomes to write to a single output directory | '{self._total_num_genomes:,}'>max_limit={max_limit:,}"
+            assert (
+                self._total_num_genomes < max_limit
+            ), f"exceeded max number of genomes to write to a single output directory | '{self._total_num_genomes:,}'>max_limit={max_limit:,}\nPlease split --input-path into multiple files contain fewer than {max_limit:,} samples."
         except AssertionError as err:
             self.cl_inputs.logger.exception(f"{err}\nExiting... ")
-            exit()
+            exit(1)
 
     def check_submission(self,
                          slurm_job_ids: List[Union[str, None]],
