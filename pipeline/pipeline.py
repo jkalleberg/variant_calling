@@ -24,6 +24,8 @@ class Pipeline:
 
     # required parameters
     pipeline_inputs: "PipelineInputManager"
+
+    # Optional parameters
     submit_size: int = 1
 
     # internal parameters

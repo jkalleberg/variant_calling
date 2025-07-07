@@ -33,7 +33,6 @@ class SBATCH:
     command_list: List[str]
     job_file: "File"
     log_dir: "Path"
-    # variant_callers: Dict[str, Dict[str, str]]
 
     # Optional parameters
     handler_status_label: Union[str, None] = None

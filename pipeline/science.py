@@ -270,8 +270,6 @@ class Science:
         if self.genome.pipeline_inputs.cl_inputs.debug_mode:
             self.genome.pipeline_inputs.cl_inputs.logger.debug(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: flags used | '{self._flags_str}'")
 
-        # print(self.genome._variables[self.genome._model_type])
-
         _dv_command_list = [
             f'echo "$(date \'+%Y-%m-%d %H:%M:%S\') INFO: using {self.genome._model_type} with {self.genome._variables[self.genome._model_type]["ckpt_name"]} to call variants for sample={self.genome._sample_id}"',
             f"time apptainer run -B {self._bindings_str} {self._container} /opt/deepvariant/bin/run_deepvariant {self._flags_str}",

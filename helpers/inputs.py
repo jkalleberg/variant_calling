@@ -100,7 +100,7 @@ class InputManager:
         """
         Add a key=value pair to a dictionary object.
 
-        If the key is missing from the dictionary the 'key=value pair' to the results dictionary.
+        If the key is missing from the dictionary, add the 'key=value pair' to the dictionary.
 
         Args:
             update_dict (Dict[str, Union[str, int, float]]): the dictionary object to be altered.
