@@ -148,7 +148,7 @@ class Pipeline:
 
         # NOTE: This only works for DeepVariant currently!
         _total_jobs = (_n_variant_callers * self.pipeline_inputs._total_num_genomes)
-        self._job_ids = [None] * _total_jobs
+        # self._job_ids = [None] * _total_jobs
 
         for i, g in enumerate(self.pipeline_inputs._all_genomes.items()):
             # print("I:", i)
@@ -199,7 +199,7 @@ class Pipeline:
                     self.pipeline_inputs.cl_inputs.logger.info(
                         f"{_updated_logger_msg}: found all outputs for sample '{_genome._sample_id}'... SKIPPING AHEAD"
                     )
-                    # self._job_ids.insert(i, None)
+                    self._job_ids.insert(i, None)
                     self._skip_counter += 1
 
                 # OUTPUT DOES NOT EXIST! OR USER WANTS TO RE-SUBMIT
@@ -239,10 +239,10 @@ class Pipeline:
                     #     self.process_genome()
 
                     if str(self._result).isnumeric() or self._result is None:
-                        self._job_ids[i] = self._result
+                        self._job_ids.insert(i, self._result)
                         self._submitted_counter += 1
                     else:
-                        self._job_ids[i] = None
+                        self._job_ids.insert(i, None)
                         self._skip_counter += 1
 
                     # Revert the logger message back to original
