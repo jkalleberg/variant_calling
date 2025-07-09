@@ -125,8 +125,8 @@ def __init__() -> None:
         if archive._args.get_stats is True:
             benchmark_jobs = Benchmark(genome=_genome)
 
-        for model_type, variables in _genome.pipeline_inputs.variant_callers.items():   
-            # print(f"KEY: {model_type}={vars}")
+        for model_type, variables in _genome.pipeline_inputs._configs.items():   
+            # print(f"KEY: {model_type}={variables}")
             # breakpoint()
 
             _default_output = variables["default_output"]

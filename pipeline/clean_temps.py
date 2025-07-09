@@ -12,12 +12,14 @@ from subprocess import check_output
 from typing import TYPE_CHECKING, Dict, List, Union
 from natsort import natsorted
 from regex import compile, search
+from sys import exit
 
 if TYPE_CHECKING:
     from genome import Genome
     from helpers.files import File
 
 from helpers.cmd_line import CMD
+from helpers.files import TestFile
 
 
 @dataclass
@@ -93,7 +95,7 @@ class CleanUp:
                 _num_samples == 1
             ), f"expected a single-sample VCF or BCF file, not {_num_samples} samples | '{default_output.path}'\nPlease update the default_output in the pickled Genome() object."
 
-    def set_search_path(self) -> None:
+    def set_search_paths(self) -> None:
         """
         Determine where to delete intermediate files.
         """
@@ -118,7 +120,6 @@ class CleanUp:
 
         # DeepVariant specific variables
         _tmp_regex = r".*tfrecord.*"
-
         self._tmp_regex = "|".join([r for r in [_scratch_regex, _tmp_regex] if r is not None])
 
         # Generic paths
@@ -133,7 +134,7 @@ class CleanUp:
                     {
                         f"{dir}": [child for child in Path(dir).iterdir()],
                     }
-                )        
+                )
 
     def check_storage_size(self, path: Union[str, Path]) -> str:
         """
@@ -252,12 +253,17 @@ class CleanUp:
                 f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: disk space cleared after deleting {self._things_to_delete}-of-{self._num_files} items | {_str}"
             )
 
-    def remove_specific_file(self, file_path: Path) -> None:
+    def remove_specific_file(self, file_path: Path, regex: Union[str, None] = None) -> None:
         """
         Selectively remove a single file based on a regular expression for the file extension.
         """
         # If input file matches a pattern...
-        file = search(pattern=self._tmp_regex, string=str(file_path.name))
+        if regex is None and self._tmp_regex is not None:
+            file = search(pattern=self._tmp_regex, string=str(file_path.name))
+        else:
+            file = search(pattern=regex, string=str(file_path.name))
+            # print("FILE:", file)
+            # breakpoint()
 
         # And a match was found
         if file is not None:
@@ -326,10 +332,11 @@ class CleanUp:
         Save storage space by removing the bigger Cue intermediate files.
         """
         total_space = self.check_storage_size(path=self.genome._sample_dir)
-        self.set_search_path()
+        self.set_search_paths()
 
         self._things_to_delete = 0
 
+        # Removing lots of files within a list of directories
         for dir, children in self._valid_dirs_and_files.items():
 
             self._total_files = len(children)
@@ -351,6 +358,48 @@ class CleanUp:
                         self.calc_space_saved()
                     else:
                         continue
+
+        # Determine if keep_vcf=false in the model-specific config file,
+        _model_config = self.genome.pipeline_inputs._configs[self.genome._model_type]
+        if "keep_vcf" in _model_config.keys():
+            _model_keep_vcf = _model_config["keep_vcf"]
+        else:
+            _model_keep_vcf = True
+
+        _model_output = _model_config["default_output"].path
+        _output_path = _model_output.parent
+        _output_name = _model_output.name
+
+        # Determine if a duplicate file was created (vcf + g.vcf)
+        for ext in ["g.vcf", "gvcf", "G.VCF", "GVCF"]:
+            if ext in _output_name:
+                _name_parts = _output_name.split(f".{ext}.")
+                if len(_name_parts) == 2:
+                    _name_parts.insert(-1, "vcf")
+                    _vcf_name = ".".join(_name_parts)
+                    _index_name = f"{_vcf_name}.tbi"
+                else:
+                    self.genome.pipeline_inputs.cl_inputs.logger.error(
+                        f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: unexpected output format | '{_model_output}'\nExiting...")
+                    exit(1)
+
+                for file in [_vcf_name, _index_name]:
+                    _regex = file.replace(".", "\.")
+                    _tmp_path = _output_path / file
+                    _tmp_file = TestFile(
+                        file=_tmp_path,
+                        logger=self.genome.pipeline_inputs.cl_inputs.logger,
+                    )
+                    _tmp_file.check_existing(
+                        logger_msg=self.genome.pipeline_inputs.cl_inputs.logger_msg,
+                        debug_mode=self.genome.pipeline_inputs.cl_inputs.debug_mode,
+                    )
+
+                    if _tmp_file.file_exists and _model_keep_vcf is False:
+                        self._things_to_delete += 1
+                        self.remove_specific_file(file_path=_tmp_path, regex=_regex)
+            else:
+                continue
 
         if self._things_to_delete == 0:
             self.genome.pipeline_inputs.cl_inputs.logger.info(
