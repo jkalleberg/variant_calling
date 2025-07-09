@@ -122,7 +122,7 @@ def __init__() -> None:
             "--reference",
             # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
             "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
-            # "--dry-run",
+            "--dry-run",
             # "--debug",
             "--overwrite",
             # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK

@@ -122,6 +122,8 @@ def __init__() -> None:
         clean_files = CleanUp(genome=_genome)
 
         # Start the post-variant-calling SBATCH resource usage benchmarking
+        # NOTE: this can not be run in the same SBATCH used to call_variants,
+        #       because it will attempt to check 'salloc' of a currently running job!
         if archive._args.get_stats is True:
             benchmark_jobs = Benchmark(genome=_genome)
 
