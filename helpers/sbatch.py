@@ -353,17 +353,17 @@ class SubmitSBATCH():
         Prints the 'sbatch <job_file>' command used to submit to a SLURM queue.
         """
         if self.job_file.cl_inputs.overwrite:
-            _msg = "--overwrite=True,"
+            _msg = "--overwrite=True, "
         else:
-            _msg = "--overwrite=False,"
+            _msg = ""
         if self.job_file.cl_inputs.dry_run_mode:
             self.job_file.cl_inputs.logger.info(
-                f"{self.job_file.logger_msg}: {_msg} pretending to submit SLURM job {current_job}-of-{total_jobs} with command:\n{' '.join(self._submission_cmd)}"
+                f"{self.job_file.logger_msg}: {_msg}pretending to submit SLURM job {current_job}-of-{total_jobs} with command:\n{' '.join(self._submission_cmd)}"
             )
 
         elif self.job_file.cl_inputs.debug_mode:
             self.job_file.cl_inputs.logger.debug(
-                f"{self.job_file.logger_msg}: {_msg} submitting SLURM job {current_job}-of-{total_jobs} with command:\n{' '.join(self._submission_cmd)}"
+                f"{self.job_file.logger_msg}: {_msg}submitting SLURM job {current_job}-of-{total_jobs} with command:\n{' '.join(self._submission_cmd)}"
             )
 
     def get_status(

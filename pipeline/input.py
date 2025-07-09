@@ -34,7 +34,7 @@ class PipelineInputManager:
     """
     # required parameters
     cl_inputs: "InputManager"
-    
+
     # optional parameters
     get_help_with: str = "run_deepvariant"
 
@@ -78,7 +78,7 @@ class PipelineInputManager:
 
             _variant_caller = _config_dict["model_type"]
             _ckpt_path = _config_dict["checkpoint_prefix"]
-            
+
             # Determine if user just wants the detailed manual for DeepVariant
             if _variant_caller.lower() == "deepvariant" and "get_help" in _config_dict.keys():
                 self._get_help = _config_dict["get_help"]
@@ -725,7 +725,15 @@ class PipelineInputManager:
         try:
             # Confirm at least one SLURM job id was detected
             assert ((num_submitted + num_skipped) == n_expected), f"expected {n_expected} SLURM jobs to be submitted, but received {len(slurm_job_ids)}"
+
+            # DRY RUN MODE: will produce a fake 8-digit SLURM job id
+            # if self.cl_inputs.dry_run_mode:
+            #     assert (
+            #         nothing_submitted is True
+            #     ), f"expected nothing to be submitted, but at least one SLURM jobs was submitted"
+            # else:
             assert nothing_submitted is False,  f"expected at least one SLURM jobs to be submitted" 
+        
         except AssertionError as err:
             self.cl_inputs.logger.error(
                 f"{self.cl_inputs.logger_msg}: fatal error encountered, unable to proceed further with pipeline.",

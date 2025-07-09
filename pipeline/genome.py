@@ -63,7 +63,6 @@ class Genome:
     #     default_factory=dict, init=False, repr=False
     # )
 
-
     # _paths_found: List[Union[str, None]] = field(
     #     default_factory=list, init=False, repr=False
     # )
@@ -390,7 +389,7 @@ class Genome:
                 return
                 # self._outputs = PostProcessVCF(genome=self)
             else:
-                
+
                 self.set_outputs(verbose=True)
 
                 _default_output = self.pipeline_inputs._configs[self._model_type]["default_output"]
@@ -538,11 +537,19 @@ class Genome:
             self._science._job_file.check_status()
 
         if (
-            _default_output.file_exists is False
-            and self._science._job_file.file_exists
-        ) or (
-            _default_output.file_exists 
-            and self.pipeline_inputs.cl_inputs.overwrite  
+            # If the output file does not exist, and the SBATCH file does
+            (
+                _default_output.file_exists is False
+                and self._science._job_file.file_exists
+            )
+            # Or if the output file exists, but should be re-written
+            or (
+                _default_output.file_exists and self.pipeline_inputs.cl_inputs.overwrite
+            )
+            # Or, the pipeline is being run in dry-run-mode
+            or (
+                self.pipeline_inputs.cl_inputs.dry_run_mode
+            )
         ):
 
             _submit = SubmitSBATCH(
@@ -561,12 +568,13 @@ class Genome:
 
             return _submit._job_id
         else:
-            print("NO SLURM JOB WILL BE SUBMITTED")
-            print("OUTPUT FILE EXISTS:", _default_output.file_exists)
-            print("JOB FILE EXISTS:", self._science._job_file.file_exists)
-
-            print("ANY LINES CREATED?", self._science._n_lines is not None)
-            print("OVERWRITE?", self.pipeline_inputs.cl_inputs.overwrite)
+            # if self.pipeline_inputs.cl_inputs.debug_mode:
+            self.pipeline_inputs.cl_inputs.logger.warning(
+                f"{self._log_msg}: no SBATCH jobs were submitted")
+            # print("OUTPUT FILE EXISTS:", _default_output.file_exists)
+            # print("JOB FILE EXISTS:", self._science._job_file.file_exists)
+            # print("ANY LINES CREATED?", self._science._n_lines is not None)
+            # print("OVERWRITE?", self.pipeline_inputs.cl_inputs.overwrite)
             # breakpoint()
 
     # def update_logging(self) -> None:

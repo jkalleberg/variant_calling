@@ -213,7 +213,7 @@ class Pipeline:
                     else:
                         print("LOOK HERE")
                         breakpoint()
-                    
+
                     _genome_pickle = File(
                         path_to_file=_pickle_dir / f"{_genome._sample_id}.pkl",
                         cl_inputs=self.pipeline_inputs.cl_inputs,
@@ -244,11 +244,6 @@ class Pipeline:
                     else:
                         self._job_ids[i] = None
                         self._skip_counter += 1
-
-                    # print("I:", i)
-                    # print("RESULT:", self._result)
-                    # print("JOB IDS:", self._job_ids[0:10])
-                    # breakpoint()
 
                     # Revert the logger message back to original
                     self.pipeline_inputs.cl_inputs.logger_msg = _original_logger_msg
@@ -321,6 +316,8 @@ class Pipeline:
                         # print("NOPE, OVER HERE!")
                         _current_job_ids = self._job_ids[self._starting_row:(i+1)]
 
+                    # print("JOB IDS:", self._job_ids)
+                    # breakpoint()
                     # print("CURRENT JOB IDS:", _current_job_ids)
                     # breakpoint()
 
