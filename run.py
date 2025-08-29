@@ -42,7 +42,7 @@ def __init__() -> None:
         "--model-config",
         dest="model_config",
         help="[REQUIRED]\ninput file(s) (.json)\ndefines internal parameters for a specific variant caller\nto use multiple variant callers, provide a comma-separated list config files\n(default: %(default)s)",
-        default="./tutorial/data/default_config.json",
+        default="./tutorial/data/cattle/default_config.json",
         type=str,
         metavar="</path/file>",
     )
@@ -106,52 +106,55 @@ def __init__() -> None:
     )
 
     # Uncomment to force arg entry at command line
-    # run.collect_args()
+    run.collect_args()
 
     # Edit for manually testing command line arguments
-    run.collect_args(
-        [
-            "-O",
-            "../CATTLE_TEST/",
-            # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
-            "-I",
-            # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK
-            # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK
-            # "./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
-            "./tutorial/data/250627_Sutovsky_samples.csv",
-            "--reference",
-            # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
-            "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
-            # "--dry-run",
-            # "--debug",
-            # "--overwrite",
-            # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
-            # THESE DO NOT WORK YET!
-            # "--submit-size",
-            # # "2",
-            # "10",
-            # # "--submit-start",
-            # # "2",
-            # "--submit-stop",
-            # # "2",
-            # "10",
-            #########################
-            # "--resources",
-            # "tutorial/data/resources.json",
-            # "--modules",
-            # "./scripts/setup/modules.sh",
-            # "--unmapped-reads",
-            # "NKLS",
-        ]
-    )
+    # run.collect_args(
+    #     [
+    #         "-O",
+    #         "../CATTLE_TEST/",
+    #         # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
+    #         "-I",
+    #         # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/", # WILL BREAK
+    #         # "/cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/tutorial/data/2.txt", # WILL BREAK
+    #         # "./tutorial/data/240711_9913_1kbulls_ars1.2.samples.csv",
+    #         "./tutorial/data/250627_Sutovsky_samples.csv",
+    #         "--reference",
+    #         # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
+    #         "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
+    #         # "--dry-run",
+    #         # "--debug",
+    #         # "--overwrite",
+    #         # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
+    #         # THESE DO NOT WORK YET!
+    #         # "--submit-size",
+    #         # # "2",
+    #         # "10",
+    #         # # "--submit-start",
+    #         # # "2",
+    #         # "--submit-stop",
+    #         # # "2",
+    #         # "10",
+    #         #########################
+    #         # "--resources",
+    #         # "tutorial/data/resources.json",
+    #         # "--modules",
+    #         # "./scripts/setup/modules.sh",
+    #         # "--unmapped-reads",
+    #         # "NKLS",
+    #     ]
+    # )
 
     # Confirm that user-provided command line arguments are valid
     try:
         # Check generic command-line flags -------------------------
         run.check_args()
+        
+        # Save the generic command line arguments for convenience
+        run.process_args()
 
         # INPUT PATH: Determine if a directory name was given as input, when it should be a file
-        # Confirm that a file.ext format was entered
+        # Confirm that a file.ext format was entered        
         assert (
             run._args.in_path.stem != run._args.in_path.name and run._args.in_path.is_file()
         ), f"invalid --input-path; expected a file, did you enter a directory? | '{run._args.in_path}'"
@@ -269,7 +272,7 @@ def __init__() -> None:
         exit(1)
 
     # Save the generic command line arguments for convenience
-    run.process_args()
+    # run.process_args()
 
     # Handle custom inputs needed for the generic variant calling pipeline
     _cl_inputs = InputManager(
