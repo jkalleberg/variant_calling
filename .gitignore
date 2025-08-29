@@ -32,7 +32,6 @@ mamba_envs/
 model.ckpt*
 
 # Ignore tutorial intermediate files
-tutorial_human.sh
 PopVCF.merge.list
 *concat_PopVCFs.sh
 AJtrio*

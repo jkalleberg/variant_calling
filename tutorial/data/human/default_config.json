@@ -1,0 +1,9 @@
+{
+    "model_type": "deepvariant",
+    "model_version": "1.4.0",
+    "get_help": false,
+    "output_type": "g.vcf",
+    "keep_vcf": false,
+    "gvcf_gq_binsize": 10,
+    "cnn_homref_call_min_gq": 20
+}
