@@ -162,7 +162,7 @@ def __init__() -> None:
         # OUTPUT PATH: Determine if a file name was given as output, when it should be a directory
         assert (
             run._args.out_path.stem == run._args.out_path.name and run._args.out_path.is_dir()
-        ), f"invalid --input-path; expected a file, did you enter a directory? | '{run._args.out_path}'"
+        ), f"invalid --output-path; expected a directory, did you enter a file? | '{run._args.out_path}'"
 
         ### Check custom command line flags ------------------------
         # FLEXIBLE START/STOP ARGS: terminate the pipelines if submit_stop value is less than submit_stop

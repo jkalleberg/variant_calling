@@ -185,6 +185,7 @@ class CustomModule:
 
         if self.output_required:
             self._output_path = Path(self._args.out_path).resolve()
+            self._output_path.mkdir(parents=True, exist_ok=True)
         else:
             self._output_path = None
 
