@@ -1,6 +1,7 @@
 {
     "model_type": "deepvariant",
     "model_version": "1.4.0",
+    "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_noAF/model.ckpt",
     "get_help": false,
     "output_type": "g.vcf",
     "keep_vcf": false,
