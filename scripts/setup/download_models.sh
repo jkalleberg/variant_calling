@@ -1,7 +1,7 @@
 #!/bin/bash
 # scripts/setup/download_models.sh
 """
-NOTES: These model ckpts are only required for warm-starting re-training, and are not used with 'run_deepvariant'
+NOTES: These model ckpts are only required if wanting to use the original model checkpoints with 'run_deepvariant'
 
 """
 echo -e "=== scripts/setup/download_models.sh > start $(date)"
