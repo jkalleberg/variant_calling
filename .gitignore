@@ -24,9 +24,20 @@ mamba_envs/
 *.vcf.gz*
 *.bed*
 *.dict*
+*.bam
+*.cram
+*.bam.bai
 
 # Ignore large model checkpoint files
 model.ckpt*
+
+# Ignore tutorial intermediate files
+tutorial_human.sh
+PopVCF.merge.list
+*concat_PopVCFs.sh
+AJtrio*
+HG00?*
+md5checksums.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
