@@ -1,0 +1,11 @@
+{
+    "model_type": "deepvariant",
+    "model_version": "1.4.0",
+    "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_withAF/wgs_af.model.ckpt",
+    "pop_file": "./tutorial/data/human/allele_freq/cohort.release_missing2ref.no_calls.vcf.gz",
+    "get_help": true,
+    "output_type": "g.vcf",
+    "keep_vcf": false,
+    "gvcf_gq_binsize": 10,
+    "cnn_homref_call_min_gq": 20
+}

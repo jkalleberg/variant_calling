@@ -84,7 +84,7 @@ class Pipeline:
                     else:
                         _info = "--overwrite=False, pretending to re-write the existing"
                 else:
-                    _info = "pretending to write a new"
+                    _info = "pretending to expect the following"
             else:
                 if (
                     _default_output.file_exists
@@ -98,7 +98,7 @@ class Pipeline:
                 ):
                     _info = "--overwrite=True, re-writing the existing"
                 else:
-                    _info = "writing a new"
+                    _info = "expected new"
 
             if _use_warning:
                 self.pipeline_inputs.cl_inputs.logger.warning(

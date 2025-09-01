@@ -186,7 +186,9 @@ class Genome:
                     Path(self.pipeline_inputs.cl_inputs._output_path)  / "COHORT" / self.group_name
                 )
             else:
-                self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
+                _checkpoint_label = self.pipeline_inputs._configs[self._model_type]["checkpoint_prefix"].parent.name
+                # self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
+                self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path) / self._model_type / _checkpoint_label 
 
             # Define output path structure
             self._summary_dir = self._results_dir / "RESULTS"
@@ -217,18 +219,27 @@ class Genome:
                 self._reports_dir = self._sample_dir / "reports"
                 self.pipeline_inputs.cl_inputs.create_a_dir(self._reports_dir, updated_log_msg=self._log_msg)
             elif self._model_type == "deepvariant":
-                self._pop_vcf = TestFile(
-                    file=self.pipeline_inputs._configs["deepvariant"]["pop_file"],
-                    logger=self.pipeline_inputs.cl_inputs.logger)
+                
+                if "pop_file" in self.pipeline_inputs._configs["deepvariant"].keys():
+                    _popVCF = self.pipeline_inputs._configs["deepvariant"]["pop_file"]
+                else:
+                    _popVCF = None
+                
+                if _popVCF is not None:
+                    self._pop_vcf = TestFile(
+                        file=self.pipeline_inputs._configs["deepvariant"]["pop_file"],
+                        logger=self.pipeline_inputs.cl_inputs.logger)
 
-                self._pop_vcf.check_existing()
+                    self._pop_vcf.check_existing()
 
-                _config_file = self.pipeline_inputs._configs["deepvariant"]["config_path"]
-                if not self._pop_vcf.file_exists:
-                    self.pipeline_inputs.cl_inputs.logger.info(
-                        f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease include an existing PopVCF by updating 'pop_file' within the config file | '{_config_file}'.\nExiting now...",
-                    )
-                    exit(1)
+                    _config_file = self.pipeline_inputs._configs["deepvariant"]["config_path"]
+                    if not self._pop_vcf.file_exists:
+                        self.pipeline_inputs.cl_inputs.logger.info(
+                            f"{self.pipeline_inputs.cl_inputs.logger_msg}: missing a valid PopVCF file; unable to use the custom bovine-trained checkpoint.\nPlease include an existing PopVCF by updating 'pop_file' within the config file | '{_config_file}'.\nExiting now...",
+                        )
+                        exit(1)
+                else:
+                    self._pop_vcf = None
             else:
                 print("MODEL TYPE IS WONKY")
                 breakpoint()
@@ -352,7 +363,7 @@ class Genome:
         # --------------------------------------------------
         # Population VCF -- no genotypes (DeepVariant Only)
         # --------------------------------------------------
-        if self._model_type == "deepvariant":
+        if self._model_type == "deepvariant" and self._pop_vcf is not None:
             # Add container binding path to model-specific variables
             self.pipeline_inputs.cl_inputs.add_to_dict(
                 update_dict=self._variables[self._model_type],

@@ -17,6 +17,27 @@ mamba_envs/
 /APPTAINER_TMPDIR/
 *.sif
 
+# Ignore large genomic data files
+*.fa*
+*.fasta*
+*.fai*
+*.vcf.gz*
+*.bed*
+*.dict*
+*.bam
+*.cram
+*.bam.bai
+
+# Ignore large model checkpoint files
+model.ckpt*
+
+# Ignore tutorial intermediate files
+PopVCF.merge.list
+*concat_PopVCFs.sh
+AJtrio*
+HG00?*
+md5checksums.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -165,10 +165,29 @@ class PipelineInputManager:
                 verbose=self.cl_inputs.debug_mode,
             )
 
-            # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383),
-            if _user_ckpt_prefix == _default_ckpt_prefix:
-
-                # If so, make the pop_file config item [REQUIRED]
+            # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383)
+            _using_cattle_default = (_user_ckpt_prefix == _default_ckpt_prefix)
+            
+            # Determine if the config file is labeled "default"
+            _using_default_config = ("default" in str(self._configs["deepvariant"]["config_path"]))
+            
+            # Determine if the number of channels deviates from those expected with the cattle-trained checkpoint
+            _using_noAF_checkpoint = ("noAF" in str(self._configs["deepvariant"]["checkpoint_prefix"]))
+            
+            # print("USING CATTLE CHECKPOINT:", _using_cattle_default)
+            # print("USING DEFAULT CONFIG:", _using_default_config)
+            # print("EXCLUDING ALLELE FREQ CHANNEL:", _using_noAF_checkpoint)
+            # # print("CURRENT CHECKPOINT:", self._configs["deepvariant"]["checkpoint_prefix"])
+            # # print("CURRENT CONFIG:", self._configs["deepvariant"]["config_path"])11
+            # breakpoint()
+            
+            # Check if checkpoint being used has different channels (i.e., no allele frequency channel)
+            if not _using_cattle_default:
+                if _using_noAF_checkpoint and _using_default_config:
+                    self._configs["deepvariant"]["pop_file"] = None
+                _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
+            else:
+                # If including the AF channel, make the pop_file config item [REQUIRED]
                 assert (
                     "pop_file" in self._configs["deepvariant"].keys()
                 ), "missing [REQUIRED] config value: pop_file; Please add a PopVCF to use the custom bovine-trained checkpoint (model.ckpt-282383)"
@@ -186,12 +205,15 @@ class PipelineInputManager:
                     replace_value=True,
                     verbose=self.cl_inputs.debug_mode,
                 )
-
                 _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
-
-            else:
-                print("ADD LOGIC FOR DIFFERENT DEEPVARIANT CHECKPOINTS")
-                breakpoint()
+        
+        # print("CURRENT CHECKPOINT SETTINGS:")
+        # print(self._configs["deepvariant"])
+        # breakpoint()
+        
+        if len(_deepvariant_ckpt) > 1:
+            print("ADD LOGIC FOR MULTIPLE DEEP VARIANT CONFIGS!")
+            breakpoint()
 
         if _cue_ckpt:
             print("ADD LOGIC FOR CUE CHECKPOINT")
@@ -280,19 +302,31 @@ class PipelineInputManager:
             exclude_chrs_list = list()
 
         # TO DO: Make 'unmapped_reads' a list? or perhaps go back to "ignore_chrs" flag?
-        if self.cl_inputs.args.unmapped_reads and self.cl_inputs.args.unmapped_reads not in exclude_chrs_list: 
-            exclude_chrs_list.append(self.cl_inputs.args.unmapped_reads)
-
+        if self.cl_inputs.args.unmapped_reads:
+            if "," in self.cl_inputs.args.unmapped_reads:
+                _unmapped_chrs = [
+                    str(prefix) for prefix in self.cl_inputs.args.unmapped_reads.split(",")
+                ]
+            else:
+                _unmapped_chrs = [self.cl_inputs.args.unmapped_reads]
+                
+            for extra_chr in _unmapped_chrs:
+                if extra_chr not in exclude_chrs_list: 
+                    exclude_chrs_list.append(extra_chr)
+        
         # test for 'chr' in chromosome names
         name_test = chromosome_names.str.match(pat='chr', case=False)
         if len(chromosome_names) == sum(name_test):
-            chr_to_exclude = [f"chr{x}" if "chr" not in x else x for x in exclude_chrs_list]
+            chr_to_exclude = [f"chr{x}" if ("chr" not in x) and ("_" not in x) else x for x in exclude_chrs_list]
         else:
             chr_to_exclude = exclude_chrs_list
 
         # Only exclude chromosomes that match expectations based on the Reference .dict file
         for e in chr_to_exclude:
-            find_exclude = chromosome_names.str.match(pat=e, case=False)
+            
+            # find_exclude = chromosome_names.str.match(pat=e, case=False)
+            find_exclude = chromosome_names.str.contains(pat=e, case=False)
+            
             if sum(find_exclude) == 0:
                 chr_to_exclude.remove(e)
 
@@ -637,11 +671,25 @@ class PipelineInputManager:
 
                     # Identify the unique numeric sample identifier
                     input_path = Path(row["file_path"])
-                    match = _digits_only.search(input_path.name)
-                    if match:
-                        lab_id = match.group()
+                    # print("INPUT PATH:", input_path)
+                    
+                    _name_contents = input_path.name.split(".")
+                    
+                    # print("NAME CONTENTS:", _name_contents)
+                    # print("LENGTH:", len(_name_contents))
+                    # breakpoint()
+                    
+                    if len(_name_contents) == 2:
+                        match = _digits_only.search(input_path.name)
+                        if match:
+                            lab_id = match.group()
+                        else:
+                            lab_id = _name_contents[0]
                     else:
-                        lab_id = input_path.name.split(".")[0]
+                        lab_id = _name_contents[0] 
+                    
+                    # print("LAB_ID:", lab_id)
+                    # breakpoint()
 
                     self._total_num_genomes += 1
                     contents = [lab_id] + list(row.values())
