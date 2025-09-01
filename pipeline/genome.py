@@ -186,7 +186,9 @@ class Genome:
                     Path(self.pipeline_inputs.cl_inputs._output_path)  / "COHORT" / self.group_name
                 )
             else:
-                self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
+                _checkpoint_label = self.pipeline_inputs._configs[self._model_type]["checkpoint_prefix"].parent.name
+                # self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path)
+                self._results_dir = Path(self.pipeline_inputs.cl_inputs._output_path) / self._model_type / _checkpoint_label 
 
             # Define output path structure
             self._summary_dir = self._results_dir / "RESULTS"
