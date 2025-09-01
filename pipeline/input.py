@@ -165,10 +165,29 @@ class PipelineInputManager:
                 verbose=self.cl_inputs.debug_mode,
             )
 
-            # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383),
-            if _user_ckpt_prefix == _default_ckpt_prefix:
-
-                # If so, make the pop_file config item [REQUIRED]
+            # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383)
+            _using_cattle_default = (_user_ckpt_prefix == _default_ckpt_prefix)
+            
+            # Determine if the config file is labeled "default"
+            _using_default_config = ("default" in str(self._configs["deepvariant"]["config_path"]))
+            
+            # Determine if the number of channels deviates from those expected with the cattle-trained checkpoint
+            _using_noAF_checkpoint = ("noAF" in str(self._configs["deepvariant"]["checkpoint_prefix"]))
+            
+            # print("USING CATTLE CHECKPOINT:", _using_cattle_default)
+            # print("USING DEFAULT CONFIG:", _using_default_config)
+            # print("EXCLUDING ALLELE FREQ CHANNEL:", _using_noAF_checkpoint)
+            # # print("CURRENT CHECKPOINT:", self._configs["deepvariant"]["checkpoint_prefix"])
+            # # print("CURRENT CONFIG:", self._configs["deepvariant"]["config_path"])11
+            # breakpoint()
+            
+            # Check if checkpoint being used has different channels (i.e., no allele frequency channel)
+            if not _using_cattle_default:
+                if _using_noAF_checkpoint and _using_default_config:
+                    self._configs["deepvariant"]["pop_file"] = None
+                _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
+            else:
+                # If including the AF channel, make the pop_file config item [REQUIRED]
                 assert (
                     "pop_file" in self._configs["deepvariant"].keys()
                 ), "missing [REQUIRED] config value: pop_file; Please add a PopVCF to use the custom bovine-trained checkpoint (model.ckpt-282383)"
@@ -186,12 +205,15 @@ class PipelineInputManager:
                     replace_value=True,
                     verbose=self.cl_inputs.debug_mode,
                 )
-
                 _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
-
-            else:
-                print("ADD LOGIC FOR DIFFERENT DEEPVARIANT CHECKPOINTS")
-                breakpoint()
+        
+        # print("CURRENT CHECKPOINT SETTINGS:")
+        # print(self._configs["deepvariant"])
+        # breakpoint()
+        
+        if len(_deepvariant_ckpt) > 1:
+            print("ADD LOGIC FOR MULTIPLE DEEP VARIANT CONFIGS!")
+            breakpoint()
 
         if _cue_ckpt:
             print("ADD LOGIC FOR CUE CHECKPOINT")
