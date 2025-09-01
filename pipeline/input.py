@@ -637,11 +637,25 @@ class PipelineInputManager:
 
                     # Identify the unique numeric sample identifier
                     input_path = Path(row["file_path"])
-                    match = _digits_only.search(input_path.name)
-                    if match:
-                        lab_id = match.group()
+                    # print("INPUT PATH:", input_path)
+                    
+                    _name_contents = input_path.name.split(".")
+                    
+                    # print("NAME CONTENTS:", _name_contents)
+                    # print("LENGTH:", len(_name_contents))
+                    # breakpoint()
+                    
+                    if len(_name_contents) == 2:
+                        match = _digits_only.search(input_path.name)
+                        if match:
+                            lab_id = match.group()
+                        else:
+                            lab_id = _name_contents[0]
                     else:
-                        lab_id = input_path.name.split(".")[0]
+                        lab_id = _name_contents[0] 
+                    
+                    # print("LAB_ID:", lab_id)
+                    # breakpoint()
 
                     self._total_num_genomes += 1
                     contents = [lab_id] + list(row.values())
