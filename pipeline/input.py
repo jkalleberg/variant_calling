@@ -280,19 +280,31 @@ class PipelineInputManager:
             exclude_chrs_list = list()
 
         # TO DO: Make 'unmapped_reads' a list? or perhaps go back to "ignore_chrs" flag?
-        if self.cl_inputs.args.unmapped_reads and self.cl_inputs.args.unmapped_reads not in exclude_chrs_list: 
-            exclude_chrs_list.append(self.cl_inputs.args.unmapped_reads)
-
+        if self.cl_inputs.args.unmapped_reads:
+            if "," in self.cl_inputs.args.unmapped_reads:
+                _unmapped_chrs = [
+                    str(prefix) for prefix in self.cl_inputs.args.unmapped_reads.split(",")
+                ]
+            else:
+                _unmapped_chrs = [self.cl_inputs.args.unmapped_reads]
+                
+            for extra_chr in _unmapped_chrs:
+                if extra_chr not in exclude_chrs_list: 
+                    exclude_chrs_list.append(extra_chr)
+        
         # test for 'chr' in chromosome names
         name_test = chromosome_names.str.match(pat='chr', case=False)
         if len(chromosome_names) == sum(name_test):
-            chr_to_exclude = [f"chr{x}" if "chr" not in x else x for x in exclude_chrs_list]
+            chr_to_exclude = [f"chr{x}" if ("chr" not in x) and ("_" not in x) else x for x in exclude_chrs_list]
         else:
             chr_to_exclude = exclude_chrs_list
 
         # Only exclude chromosomes that match expectations based on the Reference .dict file
         for e in chr_to_exclude:
-            find_exclude = chromosome_names.str.match(pat=e, case=False)
+            
+            # find_exclude = chromosome_names.str.match(pat=e, case=False)
+            find_exclude = chromosome_names.str.contains(pat=e, case=False)
+            
             if sum(find_exclude) == 0:
                 chr_to_exclude.remove(e)
 
