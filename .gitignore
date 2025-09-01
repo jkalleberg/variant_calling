@@ -12,6 +12,26 @@ mamba_envs/
 /.vscode/
 .vscode/*
 
+# Ignore large genomic files
+*.fa
+*.fa.fai
+*.fasta*
+*.dict
+*vcf.gz*
+*.md5
+*.bam
+*.bam.bai
+*.cram
+*.bed
+
+# Ignore tutorial files
+*HG002*
+*AJtrio*
+*HG003*
+*HG004*
+*PopVCF*
+md5checksums.txt
+
 # Ignore Apptainer containers
 /APPTAINER_CACHE/
 /APPTAINER_TMPDIR/
