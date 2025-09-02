@@ -241,8 +241,14 @@ class Science:
 
         _model_config = self.genome.pipeline_inputs._configs["deepvariant"]
 
-        if "cnn_homref_call_min_gq" in _model_config.keys() and _model_config["cnn_homref_call_min_gq"] != 20:
-            _post_process_args.append(f"cnn_homref_call_min_gq={_model_config["cnn_homref_call_min_gq"]}")
+        # TO DO: Make this work with all post_process_variants_extra_args?
+        if "cnn_homref_call_min_gq" in _model_config.keys():
+            if _model_config["cnn_homref_call_min_gq"] != 20:
+                _msg = "updating the"
+                _post_process_args.append(f"cnn_homref_call_min_gq={_model_config["cnn_homref_call_min_gq"]}")
+            else:
+                _msg = "using the default"
+            self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: {_msg} value for an internal variable | cnn_homref_call_min_gq={_model_config["cnn_homref_call_min_gq"]}")
 
         for k,v in _variable_names.items():
             _k_prefix = k.split("_")[0]
@@ -265,9 +271,15 @@ class Science:
                     flags.append(f"--output_vcf=/{_binding}/{_vcf_output}")
                     flags.append(f"--output_gvcf=/{_binding}/{v}")
 
+                    # TO DO: Make this work with all make_examples_extra_args?
                     # If user provided a different value for "gvcf_gq_binsize", update the flags given to DeepVariant
-                    if "gvcf_gq_binsize" in _model_config.keys() and _model_config["gvcf_gq_binsize"] != 5: 
-                        _make_examples_args.append(f"gvcf_gq_binsize={_model_config["gvcf_gq_binsize"]}")
+                    if "gvcf_gq_binsize" in _model_config.keys():
+                        if _model_config["gvcf_gq_binsize"] != 5:
+                            _msg = "updating the"
+                            _make_examples_args.append(f"gvcf_gq_binsize={_model_config["gvcf_gq_binsize"]}")
+                        else:
+                            _msg = "using the default"
+                        self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: {_msg} value for an internal variable | gvcf_gq_binsize={_model_config["gvcf_gq_binsize"]}")
                 else:
                     flags.append(f"--output_vcf=/{_binding}/{v}")
 
@@ -277,17 +289,17 @@ class Science:
             else:
                 print("UNEXPECTED FLAG NAME FOUND!")
                 breakpoint()
-
+        
         # Add non-default flags based on user inputs
-        if len(_make_examples_args) > 1:
+        if len(_make_examples_args) > 0:
             _ex_flags_str = ",".join(_make_examples_args)
             flags.append(f'--make_examples_extra_args="{_ex_flags_str}"')
 
-        if len(_call_variants_args) > 1:
+        if len(_call_variants_args) > 0:
             _call_flags_str = ",".join(_call_variants_args)
             flags.append(f'--call_variants_extra_args="{_call_flags_str}"')
 
-        if len(_post_process_args) > 1:
+        if len(_post_process_args) > 0:
             _post_flags_str = ",".join(_post_process_args)
             flags.append(f'--postprocess_variants_extra_args="{_post_flags_str}"')
 
