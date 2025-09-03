@@ -774,13 +774,12 @@ class PipelineInputManager:
             # Confirm at least one SLURM job id was detected
             assert ((num_submitted + num_skipped) == n_expected), f"expected {n_expected} SLURM jobs to be submitted, but received {len(slurm_job_ids)}"
 
-            # DRY RUN MODE: will produce a fake 8-digit SLURM job id
-            # if self.cl_inputs.dry_run_mode:
-            #     assert (
-            #         nothing_submitted is True
-            #     ), f"expected nothing to be submitted, but at least one SLURM jobs was submitted"
-            # else:
-            assert nothing_submitted is False,  f"expected at least one SLURM jobs to be submitted" 
+            if num_skipped == n_expected:
+                assert (
+                    nothing_submitted is True
+                ), f"expected nothing to be submitted, but at least one SLURM jobs was submitted"
+            else:
+                assert nothing_submitted is False,  f"expected at least one SLURM jobs to be submitted" 
         
         except AssertionError as err:
             self.cl_inputs.logger.error(

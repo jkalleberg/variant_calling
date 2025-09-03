@@ -424,8 +424,11 @@ class Genome:
                         self.add_symlinks()
                     return
                 else:
-                    print("ALL OUTPUTS DETECTED!")
-                    breakpoint()
+                    if self.pipeline_inputs.cl_inputs.debug_mode: 
+                        self.pipeline_inputs.cl_inputs.logger.debug(
+                            f"{self._log_msg}: all expected outputs detected")
+                    # print("ALL OUTPUTS DETECTED!")
+                    # breakpoint()
         else:
             print("EDIT TO ENABLE MULTIPLE VARIANT CALLERS")
             breakpoint()
