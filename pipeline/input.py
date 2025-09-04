@@ -539,11 +539,11 @@ class PipelineInputManager:
                 format = {row#: [sampleID, absolute path to an existing, indexed BAM/CRAM file]}
         """
         if manual_review and self.cl_inputs.debug_mode:
-            get_status = 100
+            pause = 100
         else:
-            get_status = 1000
+            pause = 1000
 
-        if (index % get_status == 0) or (index % self._total_num_rows == 0):
+        if (index % pause == 0) or (index % self._total_num_rows == 0):
             self.cl_inputs.logger.info(
                 f"{self.cl_inputs.logger_msg}: checking input format for {(index)}-of-{self._total_num_rows} rows"
             )
@@ -769,7 +769,7 @@ class PipelineInputManager:
         nothing_submitted = check_if_all_same(slurm_job_ids, None)
         num_submitted = len(find_not_NaN(slurm_job_ids))
         num_skipped = len(find_NaN(slurm_job_ids))
-
+        
         try:
             # Confirm at least one SLURM job id was detected
             assert ((num_submitted + num_skipped) == n_expected), f"expected {n_expected} SLURM jobs to be submitted, but received {len(slurm_job_ids)}"
@@ -782,6 +782,13 @@ class PipelineInputManager:
                 assert nothing_submitted is False,  f"expected at least one SLURM jobs to be submitted" 
         
         except AssertionError as err:
+            
+            # print("NOTHING SUBMITTED:", nothing_submitted)
+            print("NUM SUBMITTED:", num_submitted)
+            print("NUM SKIPPED:", num_skipped)
+            print("TOTAL:", (num_submitted + num_skipped))
+            print("NUM EXPECTED:", n_expected)
+            breakpoint()
             self.cl_inputs.logger.error(
                 f"{self.cl_inputs.logger_msg}: fatal error encountered, unable to proceed further with pipeline.",
             )
