@@ -91,10 +91,10 @@ def __init__() -> None:
     run._parser.add_argument(
         "--submit-stop",
         dest="submit_stop",
-        help="1-based index representing the final row of --input-path to include\n(default: %(default)s)",
+        help="1-based index representing the final row of --input-path to include\nif None, then run all samples.\n(default: %(default)s)",
         type=int,
         metavar="<int>",
-        default=1,
+        default=None,
     )
     run._parser.add_argument(
         "--unmapped-reads",
@@ -166,9 +166,10 @@ def __init__() -> None:
 
         ### Check custom command line flags ------------------------
         # FLEXIBLE START/STOP ARGS: terminate the pipelines if submit_stop value is less than submit_stop
-        assert (
-            run._args.submit_start <= run._args.submit_stop
-        ), f"--submit-start={run._args.submit_start:,} must be less than or equal to --submit-stop={run._args.submit_stop:,}'"
+        if run._args.submit_stop is not None:
+            assert (
+                run._args.submit_start <= run._args.submit_stop
+            ), f"--submit-start={run._args.submit_start:,} must be less than or equal to --submit-stop={run._args.submit_stop:,}'"
 
         # COMPUTE ENVIRONMENT FLAGS: terminate the pipeline if it can run on the system
         # Make the --modules flag [REQUIRED]

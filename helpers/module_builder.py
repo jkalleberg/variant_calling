@@ -68,7 +68,7 @@ class CustomModule:
         Defines standard command line arguments which are repeatedly used.
         """
         self._parser = argparse.ArgumentParser(
-            description=__doc__,
+            # description=__doc__, ## TO DO: Figure out how to make this use the __doc__ after imported 
             formatter_class=argparse.RawTextHelpFormatter,
         )
         if self.output_required:
