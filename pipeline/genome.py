@@ -10,6 +10,7 @@ from pathlib import Path
 from sys import path, exit
 from typing import Dict, List, Union, TYPE_CHECKING
 from sys import exit
+from os import environ
 
 
 if TYPE_CHECKING:   
@@ -72,7 +73,7 @@ class Genome:
     # _submitting_jobs: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
-
+        
         self._sample_num = str(self.sample[0]).zfill(count_digits(self.pipeline_inputs._total_num_genomes))
         self._sample_id = self.sample[1][0]
 
@@ -511,7 +512,7 @@ class Genome:
             self.pipeline_inputs.cl_inputs.logger.warning(
                 f"{self._log_msg}: --overwrite=False, skipping variant caller command building | '{self._science._job_file.path}'")
 
-    def init_job(self) -> None:
+    def init_job(self, conda_env_path: Union[Path, str] = Path("./miniconda_envs/dev")) -> None:
         """
         Setup the SBATCH headers, and combine with content from init_science().
         """
@@ -522,6 +523,44 @@ class Genome:
             log_dir=self._log_dir,
             )
 
+        if any("python" in item.lower() for item in self._science._command_list):
+            
+            # Determine if using the same conda env active for running the pipeline
+            _default_conda = environ.get('CONDA_DEFAULT_ENV', 'Not a conda environment')
+            _requested_conda = conda_env_path.resolve()
+            _using_default_conda = (_default_conda == str(_requested_conda))
+            
+            # Determine how many times a 'python' script is executed within the SBATCH
+            _matching_indices = [index for index, item in enumerate(self._science._command_list) if "python" in item.lower()]
+            if len(_matching_indices) > 1:
+                self.pipeline_inputs.cl_inputs.logger.warning(
+                    f"{self._log_msg}: within the same SBATCH, all python scripts use this conda environment | '{_default_conda}'")
+            
+            # Identify where to add "conda activate" prior to the first .py script!
+            _first_python_index = _matching_indices[0]
+            
+            # Confirm the conda environment exists
+            if _requested_conda.is_dir():
+                if _using_default_conda:
+                    _conda_lines = self._slurm_job._start_conda + [f"conda activate {conda_env_path}"]
+                else:
+                    # Switch to a different conda environment than the one currently used
+                    _conda_lines = self._slurm_job._start_conda + [f"conda activate {_requested_conda}"]
+                
+                # Update the command list to include "conda activate" prior to any ".py" scripts
+                self._science._command_list[_first_python_index:_first_python_index] = _conda_lines
+                self._slurm_job.command_list = self._science._command_list
+            
+            else:
+                self.pipeline_inputs.cl_inputs.logger.warning(
+                    f"{self._log_msg}: missing the expected conda environment; all python scripts will be ignored.")
+                _updated_command_list = self._science._command_list[:_first_python_index]
+                self._slurm_job.command_list = _updated_command_list
+        
+        else:
+            print("NO PYTHON SCRIPTS THAT WOULD REQUIRE A CONDA ENVIRONMENT TO BE ACTIVE.")
+            breakpoint()
+        
         # Uncomment to by-pass defining variant calling as mandatory
         # self._slurm_job.create_slurm_job()
 

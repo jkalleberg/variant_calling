@@ -44,17 +44,16 @@ class SBATCH:
     _line_list: List[str] = field(default_factory=list, init=False, repr=False)
     _start_conda: List[str] = field(default_factory=list, init=False, repr=False)
     _start_sbatch: List[str] = field(default_factory=list, init=False, repr=False)
-    _num_lines: Union[None, int] = None
-    
+    _num_lines: Union[None, int] = None 
 
     def __post_init__(self) -> None:
         
         self._header_lines = ["#!/bin/bash"]
 
-        # self._start_conda = [
-        #     "source ${CONDA_BASE}/etc/profile.d/conda.sh",
-        #     "conda deactivate",
-        # ]
+        self._start_conda = [
+            "source ${CONDA_BASE}/etc/profile.d/conda.sh",
+            "conda deactivate",
+        ]
         
         if "modules" in self.cl_inputs.args:
             if self.cl_inputs.debug_mode:

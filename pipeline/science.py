@@ -315,8 +315,8 @@ class Science:
             f'echo "$(date \'+%Y-%m-%d %H:%M:%S\') INFO: using {self.genome._model_type} with {self.genome._variables[self.genome._model_type]["ckpt_name"]} to call variants for sample={self.genome._sample_id}"',
             f"time apptainer run -B {self._bindings_str} {self._container} /opt/deepvariant/bin/run_deepvariant {self._flags_str}",
             f"python3 archive.py -I {self.genome._pickle_file.path}",
-            f"echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science ends now.'",
         ]
+        # f"echo $(date '+%Y-%m-%d %H:%M:%S')' INFO: Science ends now.'",
         self.update_command(cmd_list=_dv_command_list)
 
     def update_command(self, cmd_list: List[str]) -> None:
