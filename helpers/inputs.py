@@ -133,10 +133,10 @@ class InputManager:
                 self.logger.debug(
                     f"{_log_msg}: previous value '{new_key}={old_value}' | new value '{new_key}={new_val}'"
                 )
-            else:
-                self.logger.info(
-                    f"{_log_msg}: previous value replaced with | '{new_key}={new_val}'"
-                )
+            # else:
+            #     self.logger.info(
+            #         f"{_log_msg}: previous value replaced with | '{new_key}={new_val}'"
+            #     )
         else:
             self.logger.warning(
                 f"{_log_msg}: unable to overwrite value for an existing key | '{new_key}'"
