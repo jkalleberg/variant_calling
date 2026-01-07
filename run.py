@@ -106,42 +106,42 @@ def __init__() -> None:
     )
 
     # Uncomment to force arg entry at command line
-    # run.collect_args()
+    run.collect_args()
 
     # Edit for manually testing command line arguments
-    run.collect_args(
-        [
-            "-O",
-            "../CATTLE_TEST/",
-            # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
-            "-I",
-            # "./tutorial/data/cattle/240711_9913_1kbulls_ars1.2.samples.csv",
-            "./tutorial/data/cattle/250627_Sutovsky_samples.csv",
-            "--reference-prefix",
-            # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
-            "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
-            "--dry-run",
-            # "--debug",
-            "--overwrite",
-            # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
-            # THESE DO NOT WORK YET!
-            # "--submit-size",
-            # # "2",
-            # "10",
-            # # "--submit-start",
-            # # "2",
-            # "--submit-stop",
-            # # "2",
-            # "10",
-            #########################
-            "--resources",
-            "tutorial/data/resources.json",
-            "--modules",
-            "./scripts/setup/modules.sh",
-            "--unmapped-reads",
-            "NKLS",
-        ]
-    )
+    # run.collect_args(
+    #     [
+    #         "-O",
+    #         "../CATTLE_TEST/",
+    #         # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/CATTLE_TEST/output.txt", # WILL BREAK
+    #         "-I",
+    #         # "./tutorial/data/cattle/240711_9913_1kbulls_ars1.2.samples.csv",
+    #         "./tutorial/data/cattle/250627_Sutovsky_samples.csv",
+    #         "--reference-prefix",
+    #         # "/mnt/pixstor/schnabelr-drii/WORKING/jakth2/REF_GENOME_COPY/ARS-UCD1.2.fai", # WILL BREAK!
+    #         "../REF_GENOME_COPY/ARS-UCD1.2_Btau5.0.1Y",
+    #         "--dry-run",
+    #         # "--debug",
+    #         "--overwrite",
+    #         # UNCOMMENT / EDIT TO CONFIRM DIFFERENT FILE(S) or VALUES WORK
+    #         # THESE DO NOT WORK YET!
+    #         # "--submit-size",
+    #         # # "2",
+    #         # "10",
+    #         # # "--submit-start",
+    #         # # "2",
+    #         # "--submit-stop",
+    #         # # "2",
+    #         # "10",
+    #         #########################
+    #         "--resources",
+    #         "tutorial/data/resources.json",
+    #         "--modules",
+    #         "./scripts/setup/modules.sh",
+    #         "--unmapped-reads",
+    #         "NKLS",
+    #     ]
+    # )
 
     # Confirm that user-provided command line arguments are valid
     try:
