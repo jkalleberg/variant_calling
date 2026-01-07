@@ -149,12 +149,12 @@ def __init__() -> None:
     try:
         # Check generic command-line flags -------------------------
         run.check_args()
-        
+
         # Save the generic command line arguments for convenience
         run.process_args()
 
         # INPUT PATH: Determine if a directory name was given as input, when it should be a file
-        # Confirm that a file.ext format was entered        
+        # Confirm that a file.ext format was entered
         assert (
             run._args.in_path.stem != run._args.in_path.name and run._args.in_path.is_file()
         ), f"invalid --input-path; expected a file, did you enter a directory? | '{run._args.in_path}'"
@@ -232,15 +232,20 @@ def __init__() -> None:
 
         # Confirm that a .fai index file exists prior to running PICARD CreateSequenceDict()
         for file in _reference_files:
+
             if "fai" in file.suffix.lower():
                 # Update the command-line args to point to the FASTA file as a Path() object
-                run._args.ref_file  = Path(file).parent / Path(file).stem
+                run._args.ref_file = Path(file).parent / Path(file).stem
 
-        # Confirm path provide is valid
-        _files_found = ",".join([str(r) for r in _reference_files])
-        assert (
-            run._args.ref_file.is_file()
-        ), f"missing a .fai index file in reference genome directory entered | '{run._args.ref_file.parent}'.\nFiles found: '{_files_found}'"
+                # Confirm path for the first index available is valid
+                if run._args.ref_file.is_file():
+                    break
+                else:
+                    # List existing files available to use
+                    _files_found = ",".join([str(r) for r in _reference_files])
+                    assert (
+                        run._args.ref_file.is_file()
+                    ), f"missing a .fai index file in reference genome directory | '{run._args.ref_file.parent}'.\nFiles found: '{_files_found}'"
 
         #########################################
         #   Variant Calling Model Config(s)     #
@@ -347,7 +352,7 @@ def __init__() -> None:
     _cl_inputs.phase = f"variant_calling"
     _cl_inputs.create_logging_msg()
 
-    # Begin to iterate through all the samples    
+    # Begin to iterate through all the samples
     _group_of_samples = Pipeline(pipeline_inputs = _pipeline_inputs,
                                  submit_size=_cl_inputs.args.submit_size)
     _group_of_samples.process_cohort()

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 from helpers.files import TestFile, File
 from helpers.wrapper import timestamp
 from helpers.utils import check_if_all_same, find_NaN, find_not_NaN, partial_match_case_insensitive, check_if_all_same, iterdir_with_prefix
-
+from helpers.suffix import remove_suffixes
 
 @dataclass
 class PipelineInputManager:
@@ -167,20 +167,20 @@ class PipelineInputManager:
 
             # Determine if using the pipeline's default DeepVariant checkpoint (model.ckpt-282383)
             _using_cattle_default = (_user_ckpt_prefix == _default_ckpt_prefix)
-            
+
             # Determine if the config file is labeled "default"
             _using_default_config = ("default" in str(self._configs["deepvariant"]["config_path"]))
-            
+
             # Determine if the number of channels deviates from those expected with the cattle-trained checkpoint
             _using_noAF_checkpoint = ("noAF" in str(self._configs["deepvariant"]["checkpoint_prefix"]))
-            
+
             # print("USING CATTLE CHECKPOINT:", _using_cattle_default)
             # print("USING DEFAULT CONFIG:", _using_default_config)
             # print("EXCLUDING ALLELE FREQ CHANNEL:", _using_noAF_checkpoint)
             # # print("CURRENT CHECKPOINT:", self._configs["deepvariant"]["checkpoint_prefix"])
             # # print("CURRENT CONFIG:", self._configs["deepvariant"]["config_path"])11
             # breakpoint()
-            
+
             # Check if checkpoint being used has different channels (i.e., no allele frequency channel)
             if not _using_cattle_default:
                 if _using_noAF_checkpoint and _using_default_config:
@@ -206,11 +206,11 @@ class PipelineInputManager:
                     verbose=self.cl_inputs.debug_mode,
                 )
                 _list_of_ckpt_prefixes.append(_user_ckpt_prefix)
-        
+
         # print("CURRENT CHECKPOINT SETTINGS:")
         # print(self._configs["deepvariant"])
         # breakpoint()
-        
+
         if len(_deepvariant_ckpt) > 1:
             print("ADD LOGIC FOR MULTIPLE DEEP VARIANT CONFIGS!")
             breakpoint()
@@ -232,8 +232,26 @@ class PipelineInputManager:
         Locate a PICARD reference genome .DICT file in the same directory as cl_inputs.args.ref_file (prefix only).
         
         If missing, create a new file to identify chromosome names agnostic of species.
-        """          
-        picard_dict_name = f"{self.cl_inputs.args.ref_file.stem}.dict"
+        """
+
+        # Handle multiple suffix options that should be ignored
+        _ref_prefix = remove_suffixes(
+            filename=Path(self.cl_inputs.args.ref_file),
+            suffixes=[
+                ".fasta",
+                ".fa",
+                ".fai",
+                ".dict",
+                ".gz",
+                ".FASTA",
+                ".FA",
+                ".FAI",
+                ".DICT",
+                ".GZ",
+                ],
+            )
+
+        picard_dict_name = f"{_ref_prefix}.dict"
         picard_dict_path = self.cl_inputs.args.ref_file.parent / picard_dict_name
 
         ref_dict = TestFile(
@@ -309,11 +327,11 @@ class PipelineInputManager:
                 ]
             else:
                 _unmapped_chrs = [self.cl_inputs.args.unmapped_reads]
-                
+
             for extra_chr in _unmapped_chrs:
                 if extra_chr not in exclude_chrs_list: 
                     exclude_chrs_list.append(extra_chr)
-        
+
         # test for 'chr' in chromosome names
         name_test = chromosome_names.str.match(pat='chr', case=False)
         if len(chromosome_names) == sum(name_test):
@@ -323,10 +341,10 @@ class PipelineInputManager:
 
         # Only exclude chromosomes that match expectations based on the Reference .dict file
         for e in chr_to_exclude:
-            
+
             # find_exclude = chromosome_names.str.match(pat=e, case=False)
             find_exclude = chromosome_names.str.contains(pat=e, case=False)
-            
+
             if sum(find_exclude) == 0:
                 chr_to_exclude.remove(e)
 
@@ -672,13 +690,13 @@ class PipelineInputManager:
                     # Identify the unique numeric sample identifier
                     input_path = Path(row["file_path"])
                     # print("INPUT PATH:", input_path)
-                    
+
                     _name_contents = input_path.name.split(".")
-                    
+
                     # print("NAME CONTENTS:", _name_contents)
                     # print("LENGTH:", len(_name_contents))
                     # breakpoint()
-                    
+
                     if len(_name_contents) == 2:
                         match = _digits_only.search(input_path.name)
                         if match:
@@ -687,7 +705,7 @@ class PipelineInputManager:
                             lab_id = _name_contents[0]
                     else:
                         lab_id = _name_contents[0] 
-                    
+
                     # print("LAB_ID:", lab_id)
                     # breakpoint()
 
@@ -769,7 +787,7 @@ class PipelineInputManager:
         nothing_submitted = check_if_all_same(slurm_job_ids, None)
         num_submitted = len(find_not_NaN(slurm_job_ids))
         num_skipped = len(find_NaN(slurm_job_ids))
-        
+
         try:
             # Confirm at least one SLURM job id was detected
             assert ((num_submitted + num_skipped) == n_expected), f"expected {n_expected} SLURM jobs to be submitted, but received {len(slurm_job_ids)}"
@@ -780,9 +798,9 @@ class PipelineInputManager:
                 ), f"expected nothing to be submitted, but at least one SLURM jobs was submitted"
             else:
                 assert nothing_submitted is False,  f"expected at least one SLURM jobs to be submitted" 
-        
+
         except AssertionError as err:
-            
+
             # print("NOTHING SUBMITTED:", nothing_submitted)
             print("NUM SUBMITTED:", num_submitted)
             print("NUM SKIPPED:", num_skipped)
