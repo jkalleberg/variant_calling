@@ -231,7 +231,7 @@ class Science:
 
         # Select only the variable names, ignoring the variable paths
         _variable_names = {key: value for key, value in self.genome._variables[self.genome._model_type].items() if "name" in key.lower()}
-
+            
         # Create lists to save any non-default custom arguments
         _make_examples_args = list()
         _call_variants_args = list()
@@ -270,16 +270,6 @@ class Science:
                     # Creating a g.vcf requires also creating a vcf
                     flags.append(f"--output_vcf=/{_binding}/{_vcf_output}")
                     flags.append(f"--output_gvcf=/{_binding}/{v}")
-
-                    # TO DO: Make this work with all make_examples_extra_args?
-                    # If user provided a different value for "gvcf_gq_binsize", update the flags given to DeepVariant
-                    if "gvcf_gq_binsize" in _model_config.keys():
-                        if _model_config["gvcf_gq_binsize"] != 5:
-                            _msg = "updating the"
-                            _make_examples_args.append(f"gvcf_gq_binsize={_model_config["gvcf_gq_binsize"]}")
-                        else:
-                            _msg = "using the default"
-                        self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: {_msg} value for an internal variable | gvcf_gq_binsize={_model_config["gvcf_gq_binsize"]}")
                 else:
                     flags.append(f"--output_vcf=/{_binding}/{v}")
 
@@ -289,6 +279,52 @@ class Science:
             else:
                 print("UNEXPECTED FLAG NAME FOUND!")
                 breakpoint()
+        
+        # Define valid flags and their default values for DV stages
+        _defaults = {
+            "make_examples" : {
+                "min_base_quality": 10,
+                "min_mapping_quality": 5,
+                "gvcf_gq_binsize": 10,
+                "cnn_homref_call_min_gq": 20,
+                "logging_every_n_candidates": 2000,
+                "normalize_reads": "False"
+                },
+            "call_variants": {
+                "batch_size": 512,
+                "num_readers": 8
+                }
+        }
+        
+        if "extra_args" in _model_config.keys():
+            for dv_stage, options in _model_config["extra_args"].items():
+                
+                # Grab stage-specific defaults and valid flags
+                _stage_defaults = _defaults[dv_stage]
+                
+                for flag in options.keys():
+                    
+                    if flag not in _stage_defaults.keys():
+                        # TO DO: switch to error?
+                        self.genome.pipeline_inputs.cl_inputs.logger.warning(
+                            f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: skipping an invalid flag | '{flag}' not found in defaults: {_stage_defaults.keys()}")
+                        continue
+                    else:
+                        _default_value = _stage_defaults[flag]
+                        
+                        if options[flag] != _default_value:
+                            _msg = "updating the"
+                            if dv_stage == "make_examples":
+                                _make_examples_args.append(f"{flag}={options[flag]}")
+                            elif dv_stage == "call_variants":
+                                _call_variants_args.append(f"{flag}={options[flag]}")
+                            else:
+                                print("UNEXPECTED DV STAGE ENCOUNTERED!")
+                                breakpoint()
+                        else:
+                            _msg = "using the default"
+                        
+                        self.genome.pipeline_inputs.cl_inputs.logger.info(f"{self.genome.pipeline_inputs.cl_inputs.logger_msg}: {_msg} value for an internal variable within '{dv_stage}' | {flag}={options[flag]}")                         
         
         # Add non-default flags based on user inputs
         if len(_make_examples_args) > 0:
