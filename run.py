@@ -272,7 +272,11 @@ def __init__() -> None:
         run._args.model_config = _resolved_configs
 
     except AssertionError as error:
-        run._logger.error(f"{run._logger_msg}: {error}.\nExiting... ")
+        if run._logger_msg is None:
+            _msg = f"{error}.\nExiting... "
+        else:
+            _msg = f"{run._logger_msg}: {error}.\nExiting... "
+        run._logger.error(_msg)
         exit(1)
 
     # Save the generic command line arguments for convenience
