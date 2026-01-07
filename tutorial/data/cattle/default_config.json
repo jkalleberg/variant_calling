@@ -2,10 +2,23 @@
     "model_type": "deepvariant",
     "model_version": "1.4.0",
     "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_withAF_bovid/model.ckpt-282383",
-    "pop_file": "./tutorial/data/cattle/pop_vcf/UMAG1.POP.FREQ.vcf.gz",
-    "get_help": true,
+    "pop_file": "./tutorial/data/cattle/UMAG1.POP.FREQ.vcf.gz",
+    "get_help": false,
     "output_type": "g.vcf",
     "keep_vcf": false,
-    "gvcf_gq_binsize": 10,
-    "cnn_homref_call_min_gq": 20
-}
+    "extra_args": {
+        "make_examples": {
+            "min_base_quality": 10,
+            "min_mapping_quality": 5,
+            "gvcf_gq_binsize": 10,
+            "cnn_homref_call_min_gq": 20,
+            "logging_every_n_candidates": 2000,
+            "normalize_reads": "False"
+        },
+        "call_variants": {
+            "batch_size": 512,
+            "num_readers": 8
+        }
+        }
+    }
+    
