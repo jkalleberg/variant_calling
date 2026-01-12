@@ -1,10 +1,8 @@
 {
     "model_type": "deepvariant",
     "model_version": "1.4.0",
-    "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_noAF/model.ckpt",
+    "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_default/model.ckpt",
     "get_help": false,
     "output_type": "g.vcf",
-    "keep_vcf": false,
-    "gvcf_gq_binsize": 10,
-    "cnn_homref_call_min_gq": 20
+    "keep_vcf": false
 }
