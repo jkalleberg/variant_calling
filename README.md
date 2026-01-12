@@ -21,7 +21,7 @@
   <p align="center">
     An awesome README template to jumpstart your projects!
     <br />
-    <a href="https://github.com/jkalleberg/variant_calling/tree/working-jk/docs"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/jkalleberg/variant_calling/docs"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/jkalleberg/variant_calling">View Demo</a>
