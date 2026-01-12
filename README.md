@@ -282,10 +282,9 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
           - In this version, a channel called "insert size" (IS) was included by default.
         - Alternatively: `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain.
           - This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
-          - **Using AF models requires a fourth input file (see below).**
 
-
-  2. For DeepVariant-AF, population allele frequencies (AF) for your species (`VCF`)
+  2. Population allele frequencies (AF) for your species (`VCF`)
+      - Required input for any "AF" version of DeepVariant
       - Must be compatible with the provided Reference Genome
       - No genotypes should be present within the VCF
 
@@ -295,6 +294,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 #### Quick Start:
 
   1. Confirm your BAM/CRAM files are compatible with the inputs used in the quick start. Alternatively, you can obtain copies files used during the quick start:
+     
      [Click here](scripts/setup/tutorial_cattle.sh) to view the script contents.
 
      ```sh
