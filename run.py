@@ -68,14 +68,14 @@ def __init__() -> None:
         "-R",
         "--reference-prefix",
         dest="ref_file",
-        help="[REQUIRED]\ninput file prefix;\ndefines naming convention for the reference genome to find similar file(s) located in the same directory;\nminimum file expectations:\n\t(.fasta + .fai index)\n\tnaming convention used to create a reference dictionary file with PICARD (.dict) and a default regions file (.bed), if these are missing.", 
+        help="[REQUIRED]\ninput file prefix\ndefines naming convention for the reference genome to find similar file(s) located in the same directory\nminimum file expectations:\n\t(.fasta + .fai index)\nadditional expectations (created automatically if missing):\n\treference dictionary file created with PICARD (.dict)\n\tdefault regions file (.bed)", 
         type=str,
         metavar="</path/file_prefix_only>", 
     )
     run._parser.add_argument(
         "--submit-size",
         dest="submit_size",
-        help="controls the number of samples' submitted for variant calling;\n effectively rate-limits the amount of SLURM jobs submitted\n(default: %(default)s)",
+        help="controls the number of samples' submitted for variant calling\neffectively rate-limits the amount of SLURM jobs submitted\n(default: %(default)s)",
         type=int,
         metavar="<int>",
         default=1,
@@ -83,7 +83,7 @@ def __init__() -> None:
     run._parser.add_argument(
         "--submit-start",
         dest="submit_start",
-        help="1-based index representing the first row of --input-path to include\n(default: %(default)s)",
+        help="1-based index representing which row to start with from --input-path\n(default: %(default)s)",
         type=int,
         metavar="<int>",
         default=1,
@@ -91,7 +91,7 @@ def __init__() -> None:
     run._parser.add_argument(
         "--submit-stop",
         dest="submit_stop",
-        help="1-based index representing the final row of --input-path to include\nif None, then run all samples.\n(default: %(default)s)",
+        help="1-based index representing which row to end with from --input-path\n\tif None, then run all samples.\n(default: %(default)s)",
         type=int,
         metavar="<int>",
         default=None,
@@ -99,7 +99,7 @@ def __init__() -> None:
     run._parser.add_argument(
         "--unmapped-reads",
         dest="unmapped_reads",
-        help="[REQUIRED]\nprefix for unmapped reads in reference genome; used to exclude from these during variant calling\ndefaults to @SQ tag from ARS-UCD1.2_Btau5.0.1Y\n(default: %(default)s)",
+        help="[REQUIRED]\nprefix for unmapped reads in reference genome, which are excluded during variant calling\ndefaults to @SQ tag from ARS-UCD1.2_Btau5.0.1Y\n(default: %(default)s)",
         type=str,
         metavar="<str>",
         default="NKLS",
