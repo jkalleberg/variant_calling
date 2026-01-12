@@ -19,9 +19,6 @@
   <h3 align="center">Generic Variant Caller Pipeline</h3>
 
   <p align="center">
-    <br />
-    <a href="https://github.com/jkalleberg/variant_calling">View Demo</a>
-    &middot;
     <a href="https://github.com/jkalleberg/variant_calling/issues/new?labels=bug&template=bug-report.md">Report Bug</a>
     &middot;
     <a href="https://github.com/jkalleberg/variant_calling/issues/new?labels=enhancement&template=feature-request.md">Request Feature</a>
