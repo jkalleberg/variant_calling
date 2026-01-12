@@ -260,9 +260,9 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     - **NOTE:** sample name (aka lab id) will be extracted from the BAM/CRAM file
       - For example: `384425_ABC.bam` will be converted to `384425_ABC` 
       - *Assumptions: alphanumeric, and unique for each individual/sample/genome*
-    - Read data and index file are located within the same directory 
-    - Currently, only support pre-processed Illumina short-read WGS aligned to a reference genome
-      - Future releases may support alternative sequencing platforms
+    - Read data and index file are located within the same directory. 
+    - Currently, only support pre-processed Illumina short-read WGS aligned to a reference genome.
+      - Future releases may support alternative sequencing platforms.
   
 
 2. Reference Genome (`FA/FASTA`):
@@ -283,10 +283,10 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
         - Alternatively: `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain.
           - This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
 
-  2. Population allele frequencies (AF) for your species (`VCF`)
-      - Required input for any "AF" version of DeepVariant
-      - Must be compatible with the provided Reference Genome
-      - No genotypes should be present within the VCF
+  2. Population allele frequencies (AF) for your species (`VCF`):
+      - Required input for any "AF" version of DeepVariant.
+      - Must be compatible with the provided Reference Genome.
+      - No genotypes should be present within the VCF.
 
 
 **Tutorial Data Availability:**
@@ -387,20 +387,20 @@ We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CR
 
 1. Input File (`CSV/TSV`):
     - [Click here](tutorial/data/cattle/250627_Sutovsky_samples.csv) to view an example file. 
-    - One line for each sample
-    - Provides the absolute path to each BAM/CRAM and index files
-    - All files must exist already and be compatible with the reference genome
+    - No header; one line for each sample.
+    - Provides the absolute path to each BAM/CRAM and index files.
+    - All files must exist already and be compatible with the reference genome.
     
   
 2. Output Path (`/path/to/directory`):
-    - Ensures multiple checkpoints can be used to generate VCFs for the same samples 
+    - Ensures multiple checkpoints can be used to generate VCFs for the same samples. 
     - The entered directory path is appended with `<model_type>/<checkpoint_label>`
         - For example, `/path/to/directory/deepvariant/v1.4.0_withIS_noAF`
-    - This is derived from the checkpoint naming conventions described previously
+    - Format is based on the checkpoint naming conventions described previously.
 
 3. SBATCH config file (`JSON`):
     - [Click here](tutorial/data/resources.json) to view an example file.
-    - **NOTE:** variable names (aka keys with this dictionary) **must be valid SLURM SBATCH flags** 
+    - **NOTE:** variable names (aka keys with this dictionary) **must be valid SLURM SBATCH flags.** 
       - The exception is `"email"` which is automatically converted into two SBATCH flags internally:
         - `--mail-type=FAIL`
         - `--mail-user=<email provided>`  
@@ -410,11 +410,11 @@ We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CR
     - **NOTE:** variable (aka keys with this dictionary) must match expectations.
     - Valid variables include:
       - `model_type`: only "deepvariant" supported currently; future releases may support "cue" 
-      - `model_version`: only "v1.4.0" supported currently; future releases may support v1.5.0+
-      - `checkpoint_prefix`: relative path to an existing checkpoint directory 
-      - `pop_file`: relative path to an existing PopVCF, compatible with the reference genome
-      - `get_help`: if true, print the internal menu options of the Singularity/Apptainer container used
-      - `output_type`: valid options include ["vcf", "g.vcf"] 
+      - `model_version`: only "v1.4.0" supported currently; future releases may support v1.5.0+.
+      - `checkpoint_prefix`: relative path to an existing checkpoint directory. 
+      - `pop_file`: relative path to an existing PopVCF and compatible with the reference genome.
+      - `get_help`: if true, print the internal menu options of the Singularity/Apptainer container used.
+      - `output_type`: valid options include ["vcf", "g.vcf"]. 
       - `keep_vcf`: creating a g.vcf automatically produces a vcf within DV. If true, keeps both.
       - `extra_args`: controls a subset of DV sub-process flags.
     - [Click here](docs/container_man_pgs/) to view a static version of all DV sub-process flags.
