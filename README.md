@@ -265,26 +265,27 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 #### Variant Calling Inputs:
 
 1. Sequencing Data (BAM/CRAM):
-    - NOTE: sample name / id will be extracted from the BAM/CRAM file
+    - **NOTE:** sample name (aka lab id) will be extracted from the BAM/CRAM file
       - For example: `384425_ABC.bam` will be converted to `384425_ABC` 
-      - **Assumptions: alphanumeric, and unique for each individual/sample/genome**
+      - *Assumptions: alphanumeric, and unique for each individual/sample/genome*
     - Read data and index file are located within the same directory 
     - Pre-processed Illumina short-read WGS aligned to a reference genome
-    - Future releases may support alternative sequencing platforms.
+    - Future releases may support alternative sequencing platforms
   
 
 2. Reference Genome (FA/FASTA):
     - Must be compatible with the provided sequencing data
   
 
-#### DeepVariant Specific Inputs:
-  1. For DeepVariant, a model checkpoint file:
+##### DeepVariant Specific Inputs:
+  1. Model checkpoint prefix:
       - Multiple versions of the WGS model are supported
       - All model-specific files are expected to be stored together within the current directory under `./tutorial/existing_ckpts/DeepVariant/`
         - Each unique model checkpoint has a sub-directory with an expected naming convention:
         `<version number>_<model type>`
-        - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size (IS)" was included by default.
-        - `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain. This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel. **Using AF models requires a fourth input file (see below).**
+          - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size (IS)" was included by default.
+          - `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain. This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
+          - **Using AF models requires a fourth input file (see below).**
 
 
   2. For DeepVariant-AF, population allele frequencies (AF) for your species (VCF, no genotypes)
