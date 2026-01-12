@@ -269,7 +269,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     - Must be compatible with the provided sequencing data
   
 
-**DeepVariant Specific Inputs:**
+***DeepVariant Specific Inputs:***
   1. Model checkpoint prefix:
       - All model-specific files are expected to be stored together within a directory.
       - Multiple versions of the WGS model are supported:
