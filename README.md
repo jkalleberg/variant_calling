@@ -380,10 +380,10 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="custom-inputs"></a>
-##### Customize Inputs:
+### Customize Inputs:
 
 1. Input File (`CSV/TSV`):
-    - [Click here](tutorial/data/cattle/250627_Sutovsky_samples.csv) to view an example. 
+    - [Click here](tutorial/data/cattle/250627_Sutovsky_samples.csv) to view an example file. 
     - One line for each sample
     - Provides the absolute path to each BAM/CRAM and index files
     - All files must exist already and be compatible with the reference genome
@@ -391,20 +391,20 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
   
 2. Output Path (`/path/to/directory`):
     - Ensures multiple checkpoints can be used to generate VCFs for the same samples 
-    - The entered directory path is appended with <model_type>/<checkpoint_label>
+    - The entered directory path is appended with `<model_type>/<checkpoint_label>`
         - For example, `/path/to/directory/deepvariant/v1.4.0_withIS_noAF`
     - This is derived from the checkpoint naming conventions described previously.
 
 3. SBATCH config file (`JSON`):
-    - [Click here](tutorial/data/resources.json) to view an example.
-    - NOTE: variable names (aka keys with this dictionary) **must** be valid SLURM SBATCH flags. 
+    - [Click here](tutorial/data/resources.json) to view an example file.
+    - **NOTE:** variable names (aka keys with this dictionary) **must be valid SLURM SBATCH flags** 
       - The exception is `"email"` which is automatically converted into two SBATCH flags internally:
         - `--mail-type=FAIL`
         - `--mail-user=<email provided>`  
      
 4. Pipeline config file (`JSON`):
-    - [Click here](tutorial/data/cattle/default_config.json) to view an example.
-    - NOTE: variable (aka keys with this dictionary) must match expectations.
+    - [Click here](tutorial/data/cattle/default_config.json) to view an example file.
+    - **NOTE:** variable (aka keys with this dictionary) must match expectations.
     - Valid variables include:
       - `model_type`: only "deepvariant" supported currently; future releases may support "cue" 
       - `model_version`: only "v1.4.0" supported currently; future releases may support v1.5.0+
@@ -414,19 +414,16 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
       - `output_type`: valid options include ["vcf", "g.vcf"] 
       - `keep_vcf`: creating a g.vcf automatically produces a vcf within DV. If true, keeps both.
       - `extra_args`: controls a subset of DV sub-process flags.
-          - [Click here](docs/container_man_pgs/) to view a static version of all DV sub-process flags.
+    - [Click here](docs/container_man_pgs/) to view a static version of all DV sub-process flags.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="execution-bovine"></a>
 ### Usage: Bovine-trained DV-AF
 
-  **NOTE:** Usage example for pre-processed cattle WGS and `v1.4.0._withIS_withAF_bovid`
+  Example usage for the `v1.4.0._withIS_withAF_bovid` DeepVariant checkpoint.
 
   [Click here](tutorial/cattle/default_config.json) to view the default `--model-config` file.
-
-  **Missing a PopVCF for your species?**
-  <p align="right">(<a href="#execution-human">See how to use the human-trained DV model.</a>)</p>
 
   ```sh
   # Get off the login node
@@ -539,6 +536,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
   Waiting for you to press (c) to continue. ----------------------------------------------------------------
   ```
 
+### Additional Usage Examples
   ```sh
   # Submit all samples (2 at a time) using the variant caller pipeline
   # Number of samples depends on number of rows in -I / --input-path
@@ -554,13 +552,22 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
   (dev)[jakth2@c096 variant_calling]$ python3 run.py -O ../CATTLE_TUTORIAL/ -I ./tutorial/data/cattle/250627_Sutovsky_samples.csv --reference-prefix ./tutorial/data/cattle/reference/ARS-UCD1.2_Btau5.0.1Y --submit-start 2 --submit-stop 3 --dry-run
   ```
 
-  **NOTE:** adding `--overwrite` will replace both the SBATCH job and enable recreating of all intermediate outputs.
+  ```sh
+  # Re-write the SBATCH, create new intermediate outputs for 
+  # a single sample using the variant caller pipeline
+  # Number of samples depends on number of rows in -I / --input-path
+  # NOTE: --submit-start & --submit-stop are 1-based indexes of --input-path CSV file
+  #       if N = submit-start, then submit-stop = N+1
+  #       if no value for submit-stop is provided, then all remaining rows will be submitted
+  (dev)[jakth2@c096 variant_calling]$ python3 run.py -O ../CATTLE_TUTORIAL/ -I ./tutorial/data/cattle/250627_Sutovsky_samples.csv --reference-prefix ./tutorial/data/cattle/reference/ARS-UCD1.2_Btau5.0.1Y --submit-start 2 --submit-stop 3 --overwrite --dry-run
+  ```
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="execution-human"></a>
 ### Usage: Human-trained DV
 
-  **NOTE:** Usage example for pre-processed cattle WGS and `v1.4.0._withIS_default`
+  Example usage for the `v1.4.0._withIS_default` DeepVariant checkpoint.
 
   [Click here](tutorial/cattle/default_config.json) to view the default `--model-config` file.
   
@@ -585,10 +592,22 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
   _Expected Output:_
 
   ```sh
-  # Relative to the bovine-trained model, the only difference should be the different value for --customized-model=/ckpt_path/model.ckpt (instead of /ckpt_path/model.ckpt-282383)
+  # Relative to the bovine-trained model, the only difference 
+  # should be the different value for --customized-model=/ckpt_path/model.ckpt 
+  # (instead of /ckpt_path/model.ckpt-282383)
 
-  /opt/deepvariant/bin/run_deepvariant --model_type=WGS --num_shards=64 --sample_name=384425 --ref=/ref_path/ARS-UCD1.2_Btau5.0.1Y.fa --regions=/region_path/ARS-UCD1.2_Btau5.0.1Y.bed --customized_model=/ckpt_path/model.ckpt --reads=/reads_path/384425.bam --output_vcf=/output_path/384425.vcf.gz --output_gvcf=/output_path/384425.g.vcf.gz --intermediate_results_dir=/temp_path/
-  ``` 
+  /opt/deepvariant/bin/run_deepvariant \
+    --model_type=WGS --num_shards=64 --sample_name=384425 \
+    --ref=/ref_path/ARS-UCD1.2_Btau5.0.1Y.fa \
+    --regions=/region_path/ARS-UCD1.2_Btau5.0.1Y.bed \
+    --customized_model=/ckpt_path/model.ckpt \
+    --reads=/reads_path/384425.bam \
+    --output_vcf=/output_path/384425.vcf.gz \
+    --output_gvcf=/output_path/384425.g.vcf.gz \
+    --intermediate_results_dir=/temp_path/
+  ```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p> 
 
 <a id="output"></a>
 #### Output
@@ -631,8 +650,5 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     2026-01-12 02:15:34 PM - [INFO] - [archive]: disk space cleared after deleting 197-of-195 items | 34.657G-of-35.189G
     ===== end of /cluster/pixstor/schnabelr-drii/WORKING/jakth2/variant_calling/archive.py @ 2026-01-12  14:15:34 =====
     ```
-
-<p align="right">(<a href="#tutorial-top">back to tutorial top</a>)</p>
-
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
