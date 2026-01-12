@@ -111,8 +111,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     nothing to commit, working tree clean
     ```
 
-<p align="right">(<a href="#install-top">back to install top</a>)</p>
-
 
 <a id="setup-top"></a>
 ### Setup
@@ -165,8 +163,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    === end of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
    ```
 
-<p align="right">(<a href="#setup-top">back to setup top</a>)</p>
-
 2. Activate HPC-cluster-specific software modules:
 
    [Click here](scripts/setup/modules.sh) to view the script contents.
@@ -210,8 +206,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    === scripts/setup/modules.sh > end Fri Aug 29 12:14:02 CDT 2025
    ```
 
-<p align="right">(<a href="#setup-top">back to setup top</a>)</p>
-
 3. Create the development conda environment `(dev)`, and confirm it works:
 
    [Click here](scripts/setup/build_dev.sh) to view the script contents.
@@ -254,9 +248,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    . scripts/setup/download_models.sh
    ```
 
-<p align="right">(<a href="#setup-top">back to setup top</a>)</p>
-
-<!-- USAGE -->
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="tutorial-top"></a>
 ### Tutorial
@@ -264,7 +256,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 <a id="inputs"></a>
 #### Variant Calling Inputs:
 
-1. Sequencing Data (BAM/CRAM):
+1. Sequencing Data (`BAM/CRAM`):
     - **NOTE:** sample name (aka lab id) will be extracted from the BAM/CRAM file
       - For example: `384425_ABC.bam` will be converted to `384425_ABC` 
       - *Assumptions: alphanumeric, and unique for each individual/sample/genome*
@@ -273,7 +265,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     - Future releases may support alternative sequencing platforms
   
 
-2. Reference Genome (FA/FASTA):
+2. Reference Genome (`FA/FASTA`):
     - Must be compatible with the provided sequencing data
   
 
@@ -283,28 +275,26 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
       - All model-specific files are expected to be stored together within the current directory under `./tutorial/existing_ckpts/DeepVariant/`
         - Each unique model checkpoint has a sub-directory with an expected naming convention:
         `<version number>_<model type>`
-          - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size (IS)" was included by default.
+          - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size" (IS) was included by default.
           - `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain. This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
           - **Using AF models requires a fourth input file (see below).**
 
 
-  2. For DeepVariant-AF, population allele frequencies (AF) for your species (VCF, no genotypes)
+  2. For DeepVariant-AF, population allele frequencies (AF) for your species (`VCF`)
       - Must be compatible with the provided Reference Genome
+      - No genotypes should be present within the VCF
 
-<p align="right">(<a href="#tutorial-top">back to tutorial top</a>)</p>
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="quick-start"></a>
 #### Quick Start:
 
-  1. Confirm your BAM/CRAM files are compatible with the inputs used in the quick start.
+  1. Confirm your BAM/CRAM files are compatible with the inputs used in the quick start. Alternatively, you can obtain copies files used during the quick start:
+     [Click here](scripts/setup/tutorial_cattle.sh) to view the script contents.
 
-      Alternatively, you can obtain copies files used during the quick start:
-
-      [Click here](scripts/setup/tutorial_cattle.sh) to view the script contents.
-
-      ```sh
-      . scripts/setup/tutorial_cattle.sh
-      ```
+     ```sh
+     . scripts/setup/tutorial_cattle.sh
+     ```
 
   2. Confirm source code behaves as expected:
 
@@ -382,32 +372,32 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
                               (default: NKLS)
       ```
 
-   <p align="right">(<a href="#tutorial-top">back to tutorial top</a>)</p>
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="custom-inputs"></a>
 ##### Customize Inputs:
 
-1. Input File (CSV/TSV):
+1. Input File (`CSV/TSV`):
     - [Click here](tutorial/data/cattle/250627_Sutovsky_samples.csv) to view an example. 
     - One line for each sample
     - Provides the absolute path to each BAM/CRAM and index files
     - All files must exist already and be compatible with the reference genome
     
   
-2. Output Path (/path/to/directory):
+2. Output Path (`/path/to/directory`):
     - Ensures multiple checkpoints can be used to generate VCFs for the same samples 
     - The entered directory path is appended with <model_type>/<checkpoint_label>
         - For example, `/path/to/directory/deepvariant/v1.4.0_withIS_noAF`
     - This is derived from the checkpoint naming conventions described previously.
 
-3. SBATCH config file (JSON):
+3. SBATCH config file (`JSON`):
     - [Click here](tutorial/data/resources.json) to view an example.
     - NOTE: variable names (aka keys with this dictionary) **must** be valid SLURM SBATCH flags. 
       - The exception is `"email"` which is automatically converted into two SBATCH flags internally:
         - `--mail-type=FAIL`
         - `--mail-user=<email provided>`  
      
-4. Pipeline config file (JSON):
+4. Pipeline config file (`JSON`):
     - [Click here](tutorial/data/cattle/default_config.json) to view an example.
     - NOTE: variable (aka keys with this dictionary) must match expectations.
     - Valid variables include:
@@ -421,10 +411,10 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
       - `extra_args`: controls a subset of DV sub-process flags.
           - [Click here](docs/container_man_pgs/) to view a static version of all DV sub-process flags.
 
-<p align="right">(<a href="#tutorial-top">back to tutorial top</a>)</p> 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="execution-bovine"></a>
-##### Execution - Bovine
+### Usage: Bovine-trained DV-AF
 
   **NOTE:** Usage example for pre-processed cattle WGS and `v1.4.0._withIS_withAF_bovid`
 
@@ -563,7 +553,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 
 
 <a id="execution-human"></a>
-##### Execution - Human
+### Usage: Human-trained DV
 
   **NOTE:** Usage example for pre-processed cattle WGS and `v1.4.0._withIS_default`
 
