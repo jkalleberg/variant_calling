@@ -37,9 +37,7 @@
       </ul>
     </li>
     <li>
-      <a href="#usage">Usage</a>
-      <ul>
-        <li><a href="#tutorial">Tutorial</a></li>
+      <a href="#tutorial">Tutorial</a></li>
         <ul>
           <li><a href="#inputs">Variant Calling Inputs</a></li>
           <li><a href="#quick-start">Quick Start: Cattle</a></li>
@@ -250,11 +248,11 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 
 5. Download a local copy of the model checkpoint files:
 
-  [Click here](scripts/setup/download_models.sh) to view the script contents.
+   [Click here](scripts/setup/download_models.sh) to view the script contents.
 
-  ```sh
-  . scripts/setup/download_models.sh
-  ```
+   ```sh
+   . scripts/setup/download_models.sh
+   ```
 
 <p align="right">(<a href="#setup-top">back to setup top</a>)</p>
 
@@ -263,7 +261,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 <a id="tutorial-top"></a>
 ### Tutorial
 
-**Already have processed BAM/CRAM files for cattle?** <p align="right">(<a href="#quick-start">Go to quick-start</a>)</p>
+**Already have processed BAM/CRAM files for cattle?** <p align="left">(<a href="#quick-start">Go to quick-start</a>)</p>
 
 <a id="inputs"></a>
 #### Variant Calling Inputs:
