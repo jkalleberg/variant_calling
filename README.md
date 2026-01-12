@@ -271,13 +271,13 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 
 **DeepVariant Specific Inputs:**
   1. Model checkpoint prefix:
-      - Multiple versions of the WGS model are supported
-      - All model-specific files are expected to be stored together within the current directory under `./tutorial/existing_ckpts/DeepVariant/`
-        - Each unique model checkpoint has a sub-directory with an expected naming convention:
+      - All model-specific files are expected to be stored together
+      - Multiple versions of the WGS model are supported (see `tutorial/existing_ckpts/DeepVariant/`)
+      - Each unique model checkpoint has a sub-directory with an expected naming convention:
         `<version number>_<model type>`
-          - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size" (IS) was included by default.
-          - `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain. This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
-          - **Using AF models requires a fourth input file (see below).**
+        - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size" (IS) was included by default.
+        - `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain. This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
+        - **Using AF models requires a fourth input file (see below).**
 
 
   2. For DeepVariant-AF, population allele frequencies (AF) for your species (`VCF`)
