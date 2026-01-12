@@ -261,8 +261,8 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
       - For example: `384425_ABC.bam` will be converted to `384425_ABC` 
       - *Assumptions: alphanumeric, and unique for each individual/sample/genome*
     - Read data and index file are located within the same directory 
-    - Pre-processed Illumina short-read WGS aligned to a reference genome
-    - Future releases may support alternative sequencing platforms
+    - Currently, only support pre-processed Illumina short-read WGS aligned to a reference genome
+      - Future releases may support alternative sequencing platforms
   
 
 2. Reference Genome (`FA/FASTA`):
@@ -288,20 +288,23 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
       - Must be compatible with the provided Reference Genome
       - No genotypes should be present within the VCF
 
+
+**Tutorial Data Availability:**
+
+We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CRAM files are compatible with the cattle reference genome (`ARS-UCD1.2_Btau5.0.1Y`). Obtain your own local copies of these large input files using the following:
+     
+[Click here](scripts/setup/tutorial_cattle.sh) to view the script contents.
+
+```sh
+. scripts/setup/tutorial_cattle.sh
+```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="quick-start"></a>
 #### Quick Start:
 
-  1. Confirm your BAM/CRAM files are compatible with the inputs used in the quick start. Alternatively, you can obtain copies files used during the quick start:
-     
-     [Click here](scripts/setup/tutorial_cattle.sh) to view the script contents.
-
-     ```sh
-     . scripts/setup/tutorial_cattle.sh
-     ```
-
-  2. Confirm source code behaves as expected:
+  1. Confirm source code behaves as expected, by getting the help menu:
 
       ```sh
       # Get off the login node
@@ -393,7 +396,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     - Ensures multiple checkpoints can be used to generate VCFs for the same samples 
     - The entered directory path is appended with `<model_type>/<checkpoint_label>`
         - For example, `/path/to/directory/deepvariant/v1.4.0_withIS_noAF`
-    - This is derived from the checkpoint naming conventions described previously.
+    - This is derived from the checkpoint naming conventions described previously
 
 3. SBATCH config file (`JSON`):
     - [Click here](tutorial/data/resources.json) to view an example file.
