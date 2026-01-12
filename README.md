@@ -90,9 +90,9 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     git clone git@github.com:jkalleberg/variant_calling.git
     ```
 
-    **WARNING:** _Editing files within this cloned repository can create a tangled knot of Git commits if you don't know what you're doing!
+    **WARNING:** Editing files within this cloned repository can create a tangled knot of Git commits if you don't know what you're doing!
     
-    If you anticipate making edits to the code, you will need to **FORK** the repository (create your own version) via GitHub and clone your copy._
+    If you anticipate making edits to the code, you will need to <u>*FORK*</u> the repository (create your own version) via GitHub and clone your copy.
 
     ```sh
     git clone git@github.com:<your GitHub>/variant_calling_copy.git
