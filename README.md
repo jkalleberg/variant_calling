@@ -278,9 +278,11 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
         v1.4.0_withIS_default  v1.4.0_withIS_withAF  v1.4.0_withIS_withAF_bovid
         ```
       - A sub-directory's expected naming convention uses: `<version number>_<model type>`
-        - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS. In this version, a channel called "insert size" (IS) was included by default.
-        - Alternatively: `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain. This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
-        - **Using AF models requires a fourth input file (see below).**
+        - For example: `v1.4.0._withIS_default` represents the default, human-genome-trained checkpoint for short-read WGS.
+          - In this version, a channel called "insert size" (IS) was included by default.
+        - Alternatively: `v1.4.0._withIS_withAF_bovid` represents the custom bovine-trained checkpoint created with TrioTrain.
+          - This version is an extension of `v1.4.0_withIS_default`, which includes an additional "allele frequency" (AF) channel.
+          - **Using AF models requires a fourth input file (see below).**
 
 
   2. For DeepVariant-AF, population allele frequencies (AF) for your species (`VCF`)
