@@ -383,7 +383,7 @@ We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CR
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="custom-inputs"></a>
-### Customize Inputs:
+#### Customize Inputs:
 
 1. Input File (`CSV/TSV`):
     - [Click here](tutorial/data/cattle/250627_Sutovsky_samples.csv) to view an example file. 
@@ -422,7 +422,7 @@ We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CR
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="execution-bovine"></a>
-### Usage: Bovine-trained DV-AF
+#### Usage: Bovine-trained DV-AF
 
   Example usage for the `v1.4.0._withIS_withAF_bovid` DeepVariant checkpoint.
 
@@ -539,7 +539,7 @@ We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CR
   Waiting for you to press (c) to continue. ----------------------------------------------------------------
   ```
 
-### Additional Usage Examples
+#### Additional Usage Examples
   ```sh
   # Submit all samples (2 at a time) using the variant caller pipeline
   # Number of samples depends on number of rows in -I / --input-path
@@ -568,7 +568,7 @@ We do not provide an example BAM/CRAM file. This quick start assumes your BAM/CR
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="execution-human"></a>
-### Usage: Human-trained DV
+#### Usage: Human-trained DV
 
   Example usage for the `v1.4.0._withIS_default` DeepVariant checkpoint.
 
