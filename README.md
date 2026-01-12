@@ -277,7 +277,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     - Must be compatible with the provided sequencing data
   
 
-##### DeepVariant Specific Inputs:
+**DeepVariant Specific Inputs:**
   1. Model checkpoint prefix:
       - Multiple versions of the WGS model are supported
       - All model-specific files are expected to be stored together within the current directory under `./tutorial/existing_ckpts/DeepVariant/`
