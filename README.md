@@ -261,8 +261,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 <a id="tutorial-top"></a>
 ### Tutorial
 
-**Already have processed BAM/CRAM files for cattle?** <p align="left">(<a href="#quick-start">Go to quick-start</a>)</p>
-
 <a id="inputs"></a>
 #### Variant Calling Inputs:
 
