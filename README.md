@@ -60,7 +60,8 @@ To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-Things you need to use the software. The pipeline expects these prereqs to be contained within the `scripts/setup/modules.sh` script.
+The pipeline assumes the following dependencies are controlled within the `scripts/setup/modules.sh` script. If you install software manually, then you will need to update your system `$PATH` to include the executable software.
+
 * conda v4.10.3 
 * cuda v11.8.89
 * bedtools v2.31.1
@@ -117,7 +118,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 
 <a id="setup-top"></a>
 ### Setup
-#### Create the computing environment
+#### Creating the computing environment:
 
 1. Switch to a compute node, instead of the login node:
    
@@ -135,34 +136,36 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    srun: job <########> has been allocated resources
    ```
 
-   **NOTE:** If you want to check which partition(s) or compute resources are available:
+   **NOTE:** If you want to check which partition(s) or compute resources are available, you can edit the included helper script:
   
    [Click here](scripts/cluster_status.sh) to view the script contents.
      
-    ```sh
-    . ./scripts/cluster_status.sh
-    ```
+   **WARNING:** This script will require manual edits to match the configuration of your SLURM-based HPC cluster.
+   
+   ```sh
+   . ./scripts/cluster_status.sh
+   ```
 
-    _Example Output:_
-    ```sh
-    === start of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
-    2025-08-29 12:06:32 [INFO]: Current SLURM queue:
-                JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
-             10079692 interacti     bash   jakth2  R      31:24      1 c141
-    2025-08-29 12:06:32 [INFO]: Currently idle resources:
-    requeue*          up 2-00:00:00     18   idle c[013-015,050,072,077-082,084,092-093,098,106-108]
-    general           up 2-00:00:00      5   idle c[013-015,050,084]
-    2025-08-29 12:06:32 [INFO]: Fairshare Status:
-    Account                    User  RawShares  NormShares    RawUsage   NormUsage  EffectvUsage  FairShare    LevelFS                    GrpTRESMins                    TRESRunMins 
-    -------------------- ---------- ---------- ----------- ----------- ----------- ------------- ---------- ---------- ------------------------------ ------------------------------ 
-    general                               8500    0.538554 22609049537    0.800082      0.800082              0.673123                                cpu=21750135,mem=35033896004,+ 
-      general                 jakth2          1    0.000362      271023    0.000010      0.000012   0.065429  30.235898                                cpu=213,mem=6555136,energy=0,+ 
-    schnabelr-lab                          185    0.011721    94532621    0.003345      0.003345              3.503870                                cpu=0,mem=0,energy=0,node=0,b+ 
-      schnabelr-lab           jakth2     parent    0.011721      766040    0.000027      0.008103   0.900598                                           cpu=0,mem=0,energy=0,node=0,b+ 
-    schnabelr-umag                         100    0.006336   138492108    0.004901      0.004901              1.292805                                cpu=0,mem=0,energy=0,node=0,b+ 
-      schnabelr-umag          jakth2     parent    0.006336         100    0.000000      0.000001   0.888330                                           cpu=0,mem=0,energy=0,node=0,b+ 
-    === end of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
-    ```
+   _Example Output:_
+   ```sh
+   === start of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
+   2025-08-29 12:06:32 [INFO]: Current SLURM queue:
+               JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+            10079692 interacti     bash   jakth2  R      31:24      1 c141
+   2025-08-29 12:06:32 [INFO]: Currently idle resources:
+   requeue*          up 2-00:00:00     18   idle c[013-015,050,072,077-082,084,092-093,098,106-108]
+   general           up 2-00:00:00      5   idle c[013-015,050,084]
+   2025-08-29 12:06:32 [INFO]: Fairshare Status:
+   Account                    User  RawShares  NormShares    RawUsage   NormUsage  EffectvUsage  FairShare    LevelFS                    GrpTRESMins                    TRESRunMins 
+   -------------------- ---------- ---------- ----------- ----------- ----------- ------------- ---------- ---------- ------------------------------ ------------------------------ 
+   general                               8500    0.538554 22609049537    0.800082      0.800082              0.673123                                cpu=21750135,mem=35033896004,+ 
+     general                 jakth2          1    0.000362      271023    0.000010      0.000012   0.065429  30.235898                                cpu=213,mem=6555136,energy=0,+ 
+   schnabelr-lab                          185    0.011721    94532621    0.003345      0.003345              3.503870                                cpu=0,mem=0,energy=0,node=0,b+ 
+     schnabelr-lab           jakth2     parent    0.011721      766040    0.000027      0.008103   0.900598                                           cpu=0,mem=0,energy=0,node=0,b+ 
+   schnabelr-umag                         100    0.006336   138492108    0.004901      0.004901              1.292805                                cpu=0,mem=0,energy=0,node=0,b+ 
+     schnabelr-umag          jakth2     parent    0.006336         100    0.000000      0.000001   0.888330                                           cpu=0,mem=0,energy=0,node=0,b+ 
+   === end of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
+   ```
 
 <p align="right">(<a href="#setup-top">back to setup top</a>)</p>
 
@@ -230,9 +233,9 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 
 4. Create the Singularity/Apptainer container, and confirm it works:
 
-  [Click here](scripts/setup/build_containers.sh) to view the script contents.
+   [Click here](scripts/setup/build_containers.sh) to view the script contents.
 
-  **NOTE:** This script can be used to download alternative versions of DV, and the GPU-specific cluster. 
+   **NOTE:** This script can be used to download alternative versions of DV, and the GPU-specific cluster. 
 
    ```sh
    . scripts/setup/build_containers.sh DeepVariant-CPU
