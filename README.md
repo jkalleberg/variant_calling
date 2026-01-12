@@ -13,7 +13,6 @@
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
 
-<!-- PROJECT LOGO -->
 <br />
 <div align="center">
   <h3 align="center">Generic Variant Caller Pipeline</h3>
