@@ -41,7 +41,7 @@
         <ul>
           <li><a href="#inputs">Variant Calling Inputs</a></li>
           <li><a href="#quick-start">Quick Start: Cattle</a></li>
-          <li><a href="#custom-inputs">Variant Calling Inputs</a></li>
+          <li><a href="#custom-inputs">Pipeline Inputs</a></li>
           <li><a href="#execution-bovine">Running the bovine-trained DV model</a></li>
           <li><a href="#execution-human">Running the human-trained DV model</a></li>
         </ul>
