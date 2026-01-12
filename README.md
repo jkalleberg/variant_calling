@@ -84,8 +84,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     cd /mnt/pixstor/schnabelr-ccgi-drii/WORKING/jakth2
     ```
 
-<p align="right">(<a href="#install-top">back to install top</a>)</p>
-
 2. Create a local copy of the source code:
  
     ```sh
@@ -99,8 +97,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
     ```sh
     git clone git@github.com:<your GitHub>/variant_calling_copy.git
     ```
-
-<p align="right">(<a href="#install-top">back to install top</a>)</p>
 
 3. Enter the source code directory, and confirm the clone was successful:
     ```sh
@@ -139,43 +135,40 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    srun: job <########> has been allocated resources
    ```
 
-   * **NOTE:** If you want to check which partition(s) or compute resources are available:
+   **NOTE:** If you want to check which partition(s) or compute resources are available:
   
-     [Click here](scripts/cluster_status.sh) to view the script contents.
+   [Click here](scripts/cluster_status.sh) to view the script contents.
      
-     ```sh
-     . ./scripts/cluster_status.sh
-     ```
+    ```sh
+    . ./scripts/cluster_status.sh
+    ```
 
-     _Example Output:_
-     ```sh
-     === start of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
-     2025-08-29 12:06:32 [INFO]: Current SLURM queue:
-                 JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
-              10079692 interacti     bash   jakth2  R      31:24      1 c141
-     2025-08-29 12:06:32 [INFO]: Currently idle resources:
-     requeue*          up 2-00:00:00     18   idle c[013-015,050,072,077-082,084,092-093,098,106-108]
-     general           up 2-00:00:00      5   idle c[013-015,050,084]
-     logical_cpu       up 2-00:00:00      4   idle c[077-080]
-     logical_cpu2      up 2-00:00:00      1   idle c077
-     schnabelr-umag    up 28-00:00:0      1   idle c092
-     2025-08-29 12:06:32 [INFO]: Fairshare Status:
-     Account                    User  RawShares  NormShares    RawUsage   NormUsage  EffectvUsage  FairShare    LevelFS                    GrpTRESMins                    TRESRunMins 
-     -------------------- ---------- ---------- ----------- ----------- ----------- ------------- ---------- ---------- ------------------------------ ------------------------------ 
-     general                               8500    0.538554 22609049537    0.800082      0.800082              0.673123                                cpu=21750135,mem=35033896004,+ 
+    _Example Output:_
+    ```sh
+    === start of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
+    2025-08-29 12:06:32 [INFO]: Current SLURM queue:
+                JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+             10079692 interacti     bash   jakth2  R      31:24      1 c141
+    2025-08-29 12:06:32 [INFO]: Currently idle resources:
+    requeue*          up 2-00:00:00     18   idle c[013-015,050,072,077-082,084,092-093,098,106-108]
+    general           up 2-00:00:00      5   idle c[013-015,050,084]
+    2025-08-29 12:06:32 [INFO]: Fairshare Status:
+    Account                    User  RawShares  NormShares    RawUsage   NormUsage  EffectvUsage  FairShare    LevelFS                    GrpTRESMins                    TRESRunMins 
+    -------------------- ---------- ---------- ----------- ----------- ----------- ------------- ---------- ---------- ------------------------------ ------------------------------ 
+    general                               8500    0.538554 22609049537    0.800082      0.800082              0.673123                                cpu=21750135,mem=35033896004,+ 
       general                 jakth2          1    0.000362      271023    0.000010      0.000012   0.065429  30.235898                                cpu=213,mem=6555136,energy=0,+ 
-     schnabelr-lab                          185    0.011721    94532621    0.003345      0.003345              3.503870                                cpu=0,mem=0,energy=0,node=0,b+ 
+    schnabelr-lab                          185    0.011721    94532621    0.003345      0.003345              3.503870                                cpu=0,mem=0,energy=0,node=0,b+ 
       schnabelr-lab           jakth2     parent    0.011721      766040    0.000027      0.008103   0.900598                                           cpu=0,mem=0,energy=0,node=0,b+ 
-     schnabelr-umag                         100    0.006336   138492108    0.004901      0.004901              1.292805                                cpu=0,mem=0,energy=0,node=0,b+ 
+    schnabelr-umag                         100    0.006336   138492108    0.004901      0.004901              1.292805                                cpu=0,mem=0,energy=0,node=0,b+ 
       schnabelr-umag          jakth2     parent    0.006336         100    0.000000      0.000001   0.888330                                           cpu=0,mem=0,energy=0,node=0,b+ 
-     === end of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
-     ```
+    === end of scripts/cluster_status.sh Fri Aug 29 12:06:32 CDT 2025
+    ```
 
 <p align="right">(<a href="#setup-top">back to setup top</a>)</p>
 
 2. Activate HPC-cluster-specific software modules:
 
-  [Click here](scripts/setup/modules.sh) to view the script contents.
+   [Click here](scripts/setup/modules.sh) to view the script contents.
 
    **WARNING:** This script will require manual edits to match the configuration of your SLURM-based HPC cluster. If you install software manually, then you will need to update your system `$PATH` to include the executable software.
 
@@ -220,7 +213,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 
 3. Create the development conda environment `(dev)`, and confirm it works:
 
-  [Click here](scripts/setup/build_dev.sh) to view the script contents.
+   [Click here](scripts/setup/build_dev.sh) to view the script contents.
 
    ```sh
    . scripts/setup/build_dev.sh
@@ -234,8 +227,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    Python 3.12.11
    1.4.0
    ```
-
-<p align="right">(<a href="#setup-top">back to setup top</a>)</p>
 
 4. Create the Singularity/Apptainer container, and confirm it works:
 
@@ -253,7 +244,6 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
    1.4.0
    ```
 
-<p align="right">(<a href="#setup-top">back to setup top</a>)</p>
 
 5. Download a local copy of the model checkpoint files:
 
@@ -270,8 +260,7 @@ _Below is an example of how you can install the app on the Hellbender HPC cluste
 <a id="tutorial-top"></a>
 ### Tutorial
 
-**Already have processed BAM/CRAM files for cattle?**
-<p align="right">(<a href="#quick-start">Go to quick-start</a>)</p>
+**Already have processed BAM/CRAM files for cattle?** <p align="right">(<a href="#quick-start">Go to quick-start</a>)</p>
 
 <a id="inputs"></a>
 #### Variant Calling Inputs:
