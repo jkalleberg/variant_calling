@@ -139,7 +139,9 @@ def __init__() -> None:
                 if _default_output.path.is_file():
                     benchmark_jobs.generate_intermediates()
                 else:
-                    _model_info = f"{model_type} {variables["version"]} ({variables["checkpoint_name"]})"
+                    _version = variables["version"]
+                    _ckpt = variables["checkpoint_name"]
+                    _model_info = f"{model_type} {_version} ({_ckpt})"
                     archive._logger.warning(
                         f"missing the a required default_output after variant calling | '{_model_info}'"
                     )
