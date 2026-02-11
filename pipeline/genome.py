@@ -491,15 +491,15 @@ class Genome:
                 self._science.build_deepvariant_cmd()
 
             # Review the newly created BASH command(s)
-            if self.pipeline_inputs.cl_inputs.debug_mode:
-                self.pipeline_inputs.cl_inputs.logger.debug(
-                        f"{self._log_msg}: SCIENCE COMMAND: -----------------------------------")
-                for line in self._science._command_list:
-                    self.pipeline_inputs.cl_inputs.logger.debug(
-                        f"{self._log_msg}: {line}")
-                self.pipeline_inputs.cl_inputs.logger.debug(
-                        f"{self._log_msg}: ----------------------------------------------------")
-                breakpoint()
+            # if self.pipeline_inputs.cl_inputs.debug_mode:
+            #     self.pipeline_inputs.cl_inputs.logger.debug(
+            #             f"{self._log_msg}: SCIENCE COMMAND: -----------------------------------")
+            #     for line in self._science._command_list:
+            #         self.pipeline_inputs.cl_inputs.logger.debug(
+            #             f"{self._log_msg}: {line}")
+            #     self.pipeline_inputs.cl_inputs.logger.debug(
+            #             f"{self._log_msg}: ----------------------------------------------------")
+            #     breakpoint()
 
             # Uncomment to use Cue
             # if "cue" in self._model_type.lower():
@@ -569,10 +569,12 @@ class Genome:
         # Actually generate the SBATCH file, or pretend to
         if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
             self._slurm_job.display_job()
-        elif self.pipeline_inputs.cl_inputs.debug_mode and not self.pipeline_inputs.cl_inputs.dry_run_mode:
+        elif self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
+            print("LOOK HERE!")
             self._slurm_job.display_job()
             self._slurm_job.write_job()
         else:
+            print("NOPE OVER HERE")
             self._slurm_job.write_job()  
 
     def submit_job(

@@ -134,15 +134,15 @@ class SBATCH:
         self._header_lines.extend(self._start_sbatch)
         
         # Review the newly created BASH command(s)
-        if self.cl_inputs.debug_mode:
-            self.cl_inputs.logger.debug(
-                f"{self.cl_inputs.logger_msg}: SBATCH HEADERS: -----------------------------------")
-            for line in self._header_lines:
-                self.cl_inputs.logger.debug(
-                f"{self.cl_inputs.logger_msg}: {line}")
-            self.cl_inputs.logger.debug(
-                f"{self.cl_inputs.logger_msg}: ---------------------------------------------------")
-            breakpoint()
+        # if self.cl_inputs.debug_mode:
+        #     self.cl_inputs.logger.debug(
+        #         f"{self.cl_inputs.logger_msg}: SBATCH HEADERS: -----------------------------------")
+        #     for line in self._header_lines:
+        #         self.cl_inputs.logger.debug(
+        #         f"{self.cl_inputs.logger_msg}: {line}")
+        #     self.cl_inputs.logger.debug(
+        #         f"{self.cl_inputs.logger_msg}: ---------------------------------------------------")
+        #     breakpoint()
 
     def update_content_list(self, new_content: List[str]) -> None:
         """
