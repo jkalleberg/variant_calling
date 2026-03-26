@@ -1,0 +1,4 @@
+/cluster/pixstor/schnabelr-drii/WORKING/jakth2/250124_GIAB_AG/split_bams/383052_ELEM_a.sorted.cram
+/cluster/pixstor/schnabelr-drii/WORKING/jakth2/250124_GIAB_AG/split_bams/383052_ILMN_b.sorted.cram
+/cluster/pixstor/schnabelr-drii/WORKING/jakth2/250124_GIAB_AG/split_bams/383052_ILMN_c.sorted.cram
+/cluster/pixstor/schnabelr-drii/WORKING/jakth2/250124_GIAB_AG/split_bams/383052_ULTM_d.sorted.cram

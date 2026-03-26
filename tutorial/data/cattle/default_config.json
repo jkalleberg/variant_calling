@@ -2,10 +2,10 @@
     "model_type": "deepvariant",
     "model_version": "1.4.0",
     "checkpoint_prefix": "./tutorial/existing_ckpts/DeepVariant/v1.4.0_withIS_withAF_bovid/model.ckpt-282383",
-    "pop_file": "./tutorial/data/cattle/UMAG1.POP.FREQ.vcf.gz",
+    "pop_file": "./tutorial/data/cattle/pop_vcf/UMAG1.POP.FREQ.vcf.gz",
     "get_help": false,
     "output_type": "g.vcf",
-    "keep_vcf": false,
+    "keep_vcf": true,
     "extra_args": {
         "make_examples": {
             "min_base_quality": 10,
