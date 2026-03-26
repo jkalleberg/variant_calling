@@ -10,6 +10,7 @@ from random import randint
 from typing import List, Union
 from math import log10
 from pathlib import Path
+from re import sub
 
 from helpers.logger import get_stream_handler
 
@@ -125,6 +126,21 @@ def phredGQ_to_Eprob(gq_value: int) -> float:
     print(f"ERROR PROB @ GQ={gq_value}:\t{prop_error_prob:.09f}%")
 
     return error_prob
+
+def clean_str(input: str) -> str:
+    """
+    Replace all characters in a string which are *not* 
+    a-z, A-Z, 0-9, underscore (_), hyphen (-), or dot (.)
+
+    Args:
+        input (str): content to be cleaned
+
+    Returns:
+        str: _description_
+    """
+    pattern = r"[^a-zA-Z0-9_.-]"
+    cleaned_string = sub(pattern, "", input)
+    return cleaned_string
 
 # def clean_str(txt: str) -> str:
 #     """

@@ -570,11 +570,11 @@ class Genome:
         if not self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
             self._slurm_job.display_job()
         elif self.pipeline_inputs.cl_inputs.debug_mode and self.pipeline_inputs.cl_inputs.dry_run_mode:
-            print("LOOK HERE!")
-            self._slurm_job.display_job()
+            # print("LOOK HERE!")
+            # self._slurm_job.display_job()
             self._slurm_job.write_job()
         else:
-            print("NOPE OVER HERE")
+            # print("NOPE OVER HERE")
             self._slurm_job.write_job()  
 
     def submit_job(

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 from helpers.files import TestFile, File
 from helpers.wrapper import timestamp
-from helpers.utils import check_if_all_same, find_NaN, find_not_NaN, partial_match_case_insensitive, check_if_all_same, iterdir_with_prefix
+from helpers.utils import check_if_all_same, find_NaN, find_not_NaN, partial_match_case_insensitive, check_if_all_same, iterdir_with_prefix, clean_str
 from helpers.suffix import remove_suffixes
 
 @dataclass
@@ -673,7 +673,7 @@ class PipelineInputManager:
         
         Note: Used internally by process_samples() only.
         """
-        _digits_only = compile(r"\d+")
+        # _digits_only = compile(r"\d+")
         try:
             with open(
                 str(self.cl_inputs._input_path), mode="r", encoding="utf-8-sig"
@@ -697,14 +697,16 @@ class PipelineInputManager:
                     # print("LENGTH:", len(_name_contents))
                     # breakpoint()
 
-                    if len(_name_contents) == 2:
-                        match = _digits_only.search(input_path.name)
-                        if match:
-                            lab_id = match.group()
-                        else:
-                            lab_id = _name_contents[0]
-                    else:
-                        lab_id = _name_contents[0] 
+                    # if len(_name_contents) == 2:
+                        # match = _digits_only.search(input_path.name)
+                        # if match:
+                        #     lab_id = match.group()
+                        # else:
+                        #     lab_id = _name_contents[0]
+                    # else:
+                    #     lab_id = _name_contents[0]
+                    
+                    lab_id = clean_str(input=_name_contents[0]) 
 
                     # print("LAB_ID:", lab_id)
                     # breakpoint()
